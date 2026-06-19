@@ -39,11 +39,21 @@ pip install -r requirements.txt
 ```
 
 可先參考 `.env.example` 建立自己的 `.env`。
+程式啟動時會自動從專案根目錄載入 `.env`。
 
 ## 啟動方式
 
 ```bash
 uvicorn app.main:app --reload
+```
+
+若要套用自訂主機、連接埠或專案名稱，可先建立 `.env`，例如：
+
+```env
+APP_NAME=台股分析與模擬交易系統
+DEBUG=false
+HOST=127.0.0.1
+PORT=8000
 ```
 
 啟動後可開啟：

@@ -1,5 +1,12 @@
 from functools import lru_cache
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env", encoding="utf-8-sig")
 
 
 class Settings:
