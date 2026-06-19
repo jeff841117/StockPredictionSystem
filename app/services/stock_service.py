@@ -11,6 +11,7 @@ from app.schemas.stock import StockLookupResult, StockPriceRow
 
 settings = get_settings()
 STOCK_NO_PATTERN = re.compile(r"^\d{4,6}$")
+NOT_FOUND_MESSAGE = "查無資料，請確認股票代號是否存在，或該固定查詢區間內是否有成交資料。"
 
 
 class StockServiceError(Exception):
@@ -43,7 +44,7 @@ def fetch_stock_detail(stock_no: str) -> StockLookupResult:
     rows = _parse_rows(payload.get("data", []))
 
     if not rows:
-        raise StockNotFoundError("查無資料，請確認股票代號是否存在，或稍後再試。")
+        raise StockNotFoundError(NOT_FOUND_MESSAGE)
 
     stock_name = _extract_stock_name(payload.get("title", ""), normalized_stock_no)
     interval_start, interval_end = _get_interval_bounds()
@@ -81,7 +82,7 @@ def _fetch_month_payload(stock_no: str) -> dict:
     stat = payload.get("stat")
     if stat != "OK":
         if stat in {"很抱歉，沒有符合條件的資料!", "查詢日期大於今日，請重新查詢!"}:
-            raise StockNotFoundError("查無資料，請確認股票代號是否存在，或稍後再試。")
+            raise StockNotFoundError(NOT_FOUND_MESSAGE)
         raise ExternalServiceError("股票資料來源回傳失敗，請稍後再試。")
 
     return payload
@@ -102,7 +103,7 @@ def _parse_rows(raw_rows: list[list[str]]) -> list[StockPriceRow]:
                 volume=_normalize_int(row[1]),
             )
         )
-    return rows
+    return list(reversed(rows))
 
 
 def _convert_roc_date(raw_value: str) -> str:

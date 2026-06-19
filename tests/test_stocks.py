@@ -1,11 +1,11 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.schemas.stock import StockLookupResult, StockPriceRow
-from app.services.stock_service import ExternalServiceError
+from app.services.stock_service import ExternalServiceError, StockNotFoundError, fetch_stock_detail
 
 
 class StockSearchTests(unittest.TestCase):
@@ -22,6 +22,14 @@ class StockSearchTests(unittest.TestCase):
             interval_end="2024-05-31",
             rows=[
                 StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                ),
+                StockPriceRow(
                     trade_date="2024-05-02",
                     open_price="789.00",
                     high_price="789.00",
@@ -36,7 +44,36 @@ class StockSearchTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("台積電", response.text)
-        self.assertIn("2024-05-02", response.text)
+        self.assertIn("2024-05-31", response.text)
+        self.assertIn("查詢區間", response.text)
+        self.assertIn("資料筆數", response.text)
+        self.assertIn("顯示順序", response.text)
+        self.assertIn("成交量（股）", response.text)
+
+    @patch("app.routers.stocks.fetch_stock_detail")
+    def test_search_stock_not_found_message(self, mock_fetch) -> None:
+        mock_fetch.side_effect = StockNotFoundError(
+            "查無資料，請確認股票代號是否存在，或該固定查詢區間內是否有成交資料。"
+        )
+
+        response = self.client.get("/stocks/search", params={"stock_no": "9999"})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("固定查詢區間內是否有成交資料", response.text)
+
+    @patch("app.services.stock_service.requests.get")
+    def test_fetch_stock_detail_twse_not_found_message(self, mock_get) -> None:
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "stat": "很抱歉，沒有符合條件的資料!"
+        }
+        mock_get.return_value = mock_response
+
+        with self.assertRaises(StockNotFoundError) as context:
+            fetch_stock_detail("9999")
+
+        self.assertIn("固定查詢區間內是否有成交資料", str(context.exception))
 
     def test_search_stock_invalid_code(self) -> None:
         response = self.client.get("/stocks/search", params={"stock_no": "abcd"})

@@ -5,23 +5,31 @@
 {% block content %}
 <section class="hero">
     <h2>股票查詢結果</h2>
-    <p>固定查詢區間：{{ fixed_interval }}</p>
+    <p>{{ result.stock_name }}（{{ result.stock_no }}）的歷史成交資料。</p>
     <p>資料來源：{{ result.source_name }}</p>
 </section>
 
 <section class="result-panel">
     <div class="stock-summary">
         <div>
-            <span class="label">股票代號</span>
-            <strong>{{ result.stock_no }}</strong>
-        </div>
-        <div>
             <span class="label">股票名稱</span>
             <strong>{{ result.stock_name }}</strong>
         </div>
         <div>
+            <span class="label">股票代號</span>
+            <strong>{{ result.stock_no }}</strong>
+        </div>
+        <div>
+            <span class="label">查詢區間</span>
+            <strong>{{ result.interval_start }} 至 {{ result.interval_end }}</strong>
+        </div>
+        <div>
             <span class="label">資料筆數</span>
             <strong>{{ result.rows|length }}</strong>
+        </div>
+        <div>
+            <span class="label">顯示順序</span>
+            <strong>日期由新到舊</strong>
         </div>
     </div>
 
@@ -33,22 +41,22 @@
         <table>
             <thead>
                 <tr>
-                    <th>日期</th>
+                    <th>成交日期</th>
+                    <th>收盤價</th>
                     <th>開盤價</th>
                     <th>最高價</th>
                     <th>最低價</th>
-                    <th>收盤價</th>
-                    <th>成交量</th>
+                    <th>成交量（股）</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in result.rows %}
                 <tr>
                     <td>{{ row.trade_date }}</td>
+                    <td>{{ row.close_price }}</td>
                     <td>{{ row.open_price }}</td>
                     <td>{{ row.high_price }}</td>
                     <td>{{ row.low_price }}</td>
-                    <td>{{ row.close_price }}</td>
                     <td>{{ row.volume }}</td>
                 </tr>
                 {% endfor %}
