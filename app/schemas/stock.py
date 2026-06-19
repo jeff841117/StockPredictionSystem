@@ -10,6 +10,21 @@ class StockPriceRow(BaseModel):
     volume: str
 
 
+class ClosePriceChartPoint(BaseModel):
+    trade_date: str
+    close_price: float
+    close_price_label: str
+
+
+class ClosePriceChart(BaseModel):
+    points: list[ClosePriceChartPoint]
+    svg_path: str
+    min_price_label: str
+    max_price_label: str
+    start_date: str
+    end_date: str
+
+
 class StockLookupResult(BaseModel):
     stock_no: str
     stock_name: str

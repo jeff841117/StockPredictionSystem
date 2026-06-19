@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 import requests
 
 from app.config import get_settings
-from app.schemas.stock import StockLookupResult, StockPriceRow
+from app.schemas.stock import ClosePriceChart, ClosePriceChartPoint, StockLookupResult, StockPriceRow
 
 
 settings = get_settings()
@@ -33,6 +33,53 @@ class ExternalServiceError(StockServiceError):
 def get_fixed_interval_label() -> str:
     start, end = _get_interval_bounds()
     return f"{start} 至 {end}"
+
+
+def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None:
+    chronological_rows = list(reversed(result.rows))
+    points: list[ClosePriceChartPoint] = []
+    for row in chronological_rows:
+        try:
+            close_price_value = float(row.close_price)
+        except ValueError:
+            continue
+        points.append(
+            ClosePriceChartPoint(
+                trade_date=row.trade_date,
+                close_price=close_price_value,
+                close_price_label=row.close_price,
+            )
+        )
+
+    if len(points) < 2:
+        return None
+
+    width = 640
+    height = 240
+    padding_x = 36
+    padding_y = 24
+    min_price = min(point.close_price for point in points)
+    max_price = max(point.close_price for point in points)
+    price_span = max(max_price - min_price, 1.0)
+    usable_width = width - (padding_x * 2)
+    usable_height = height - (padding_y * 2)
+
+    coordinates: list[str] = []
+    total_points = len(points)
+    for index, point in enumerate(points):
+        x = padding_x if total_points == 1 else padding_x + (usable_width * index / (total_points - 1))
+        normalized_price = (point.close_price - min_price) / price_span
+        y = height - padding_y - (normalized_price * usable_height)
+        coordinates.append(f"{x:.2f},{y:.2f}")
+
+    return ClosePriceChart(
+        points=points,
+        svg_path=" ".join(coordinates),
+        min_price_label=f"{min_price:.2f}",
+        max_price_label=f"{max_price:.2f}",
+        start_date=points[0].trade_date,
+        end_date=points[-1].trade_date,
+    )
 
 
 def fetch_stock_detail(stock_no: str) -> StockLookupResult:

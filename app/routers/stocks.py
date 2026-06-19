@@ -8,6 +8,7 @@ from app.services.stock_service import (
     InvalidStockCodeError,
     StockLookupResult,
     StockNotFoundError,
+    build_close_price_chart,
     fetch_stock_detail,
     get_fixed_interval_label,
 )
@@ -56,6 +57,7 @@ def search_stock(
         request=request,
         name="stock_detail.html",
         context={
+            "close_price_chart": build_close_price_chart(result),
             "project_name": settings.app_name,
             "result": result,
             "fixed_interval": get_fixed_interval_label(),

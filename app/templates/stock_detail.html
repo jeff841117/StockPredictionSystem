@@ -10,6 +10,38 @@
 </section>
 
 <section class="result-panel">
+    <h3>收盤價走勢圖</h3>
+    {% if close_price_chart %}
+    <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>
+    <div class="table-wrapper">
+        <svg
+            aria-label="收盤價走勢圖"
+            viewBox="0 0 640 240"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <line x1="36" y1="24" x2="36" y2="216" stroke="#94a3b8" stroke-width="1" />
+            <line x1="36" y1="216" x2="604" y2="216" stroke="#94a3b8" stroke-width="1" />
+            <polyline
+                fill="none"
+                stroke="#0f766e"
+                stroke-width="3"
+                points="{{ close_price_chart.svg_path }}"
+            />
+            <text x="44" y="36" fill="#526072" font-size="12">最高 {{ close_price_chart.max_price_label }}</text>
+            <text x="44" y="210" fill="#526072" font-size="12">最低 {{ close_price_chart.min_price_label }}</text>
+            <text x="36" y="234" fill="#526072" font-size="12">{{ close_price_chart.start_date }}</text>
+            <text x="520" y="234" fill="#526072" font-size="12">{{ close_price_chart.end_date }}</text>
+        </svg>
+    </div>
+    {% else %}
+    <div class="error-box">
+        資料筆數不足，暫時無法繪製收盤價走勢圖。
+    </div>
+    {% endif %}
+</section>
+
+<section class="result-panel">
     <div class="stock-summary">
         <div>
             <span class="label">股票名稱</span>

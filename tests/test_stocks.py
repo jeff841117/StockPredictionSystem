@@ -49,6 +49,33 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("資料筆數", response.text)
         self.assertIn("顯示順序", response.text)
         self.assertIn("成交量（股）", response.text)
+        self.assertIn("收盤價走勢圖", response.text)
+        self.assertIn("aria-label=\"收盤價走勢圖\"", response.text)
+
+    @patch("app.routers.stocks.fetch_stock_detail")
+    def test_search_stock_success_with_insufficient_rows_shows_chart_fallback(self, mock_fetch) -> None:
+        mock_fetch.return_value = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                )
+            ],
+        )
+
+        response = self.client.get("/stocks/search", params={"stock_no": "2330"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("資料筆數不足，暫時無法繪製收盤價走勢圖", response.text)
 
     @patch("app.routers.stocks.fetch_stock_detail")
     def test_search_stock_not_found_message(self, mock_fetch) -> None:
