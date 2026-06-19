@@ -17,6 +17,11 @@ class Settings:
         self.debug = os.getenv("DEBUG", "false").lower() == "true"
         self.host = os.getenv("HOST", "127.0.0.1")
         self.port = int(os.getenv("PORT", "8000"))
+        self.stock_query_source = os.getenv(
+            "STOCK_QUERY_SOURCE",
+            "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY",
+        )
+        self.stock_query_date = os.getenv("STOCK_QUERY_DATE", "20240501")
 
 
 @lru_cache

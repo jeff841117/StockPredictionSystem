@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
+from app.services.stock_service import get_fixed_interval_label
 
 
 router = APIRouter()
@@ -19,6 +20,7 @@ def index(request: Request):
         name="index.html",
         context={
             "project_name": settings.app_name,
-            "message": "FastAPI 專案骨架已成功啟動。",
+            "message": "輸入台股代號後，即可查詢固定區間的歷史成交資料。",
+            "fixed_interval": get_fixed_interval_label(),
         },
     )

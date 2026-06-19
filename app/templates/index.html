@@ -4,8 +4,34 @@
 
 {% block content %}
 <section class="hero">
-    <h2>專案基礎骨架初始化完成</h2>
+    <h2>股票資料查詢最小版本</h2>
     <p>{{ message }}</p>
-    <p>後續可在此基礎上逐步加入股票查詢、資料儲存與模擬交易功能。</p>
+    <p>固定查詢區間：{{ fixed_interval }}</p>
+</section>
+
+<section class="result-panel">
+    <form class="search-form" action="{{ url_for('search_stock') }}" method="get">
+        <label for="stock_no">台股代號</label>
+        <div class="search-row">
+            <input
+                id="stock_no"
+                name="stock_no"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]{4,6}"
+                placeholder="例如 2330"
+                value="{{ stock_no or '' }}"
+                required
+            >
+            <button type="submit">查詢</button>
+        </div>
+        <p class="help-text">本輪固定查詢區間，不提供前端切換日期。</p>
+    </form>
+
+    {% if error_message %}
+    <div class="error-box">
+        {{ error_message }}
+    </div>
+    {% endif %}
 </section>
 {% endblock %}

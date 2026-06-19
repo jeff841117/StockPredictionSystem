@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.routers.pages import router as pages_router
+from app.routers.stocks import router as stocks_router
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,6 +18,7 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(pages_router)
+app.include_router(stocks_router)
 
 
 @app.get("/health", tags=["system"])

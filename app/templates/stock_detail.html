@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}股票查詢結果 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>股票查詢結果</h2>
+    <p>固定查詢區間：{{ fixed_interval }}</p>
+    <p>資料來源：{{ result.source_name }}</p>
+</section>
+
+<section class="result-panel">
+    <div class="stock-summary">
+        <div>
+            <span class="label">股票代號</span>
+            <strong>{{ result.stock_no }}</strong>
+        </div>
+        <div>
+            <span class="label">股票名稱</span>
+            <strong>{{ result.stock_name }}</strong>
+        </div>
+        <div>
+            <span class="label">資料筆數</span>
+            <strong>{{ result.rows|length }}</strong>
+        </div>
+    </div>
+
+    <div class="table-actions">
+        <a class="secondary-link" href="{{ url_for('index') }}">重新查詢</a>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>開盤價</th>
+                    <th>最高價</th>
+                    <th>最低價</th>
+                    <th>收盤價</th>
+                    <th>成交量</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in result.rows %}
+                <tr>
+                    <td>{{ row.trade_date }}</td>
+                    <td>{{ row.open_price }}</td>
+                    <td>{{ row.high_price }}</td>
+                    <td>{{ row.low_price }}</td>
+                    <td>{{ row.close_price }}</td>
+                    <td>{{ row.volume }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -44,6 +44,11 @@ body {
     font-size: clamp(2rem, 5vw, 3rem);
 }
 
+.subtitle {
+    margin: 12px 0 0;
+    color: var(--muted);
+}
+
 .hero {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -61,4 +66,108 @@ body {
     margin: 0 0 12px;
     color: var(--muted);
     line-height: 1.7;
+}
+
+.result-panel {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.search-form label,
+.label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.search-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.search-row input {
+    flex: 1 1 220px;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.search-row button,
+.secondary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.help-text {
+    margin-bottom: 0;
+}
+
+.error-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fff4f2;
+    border: 1px solid #f1c3bc;
+    color: #9a3412;
+}
+
+.stock-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.stock-summary strong {
+    font-size: 1.1rem;
+}
+
+.table-actions {
+    margin-bottom: 16px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+}
+
+th {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .hero,
+    .result-panel {
+        padding: 20px;
+    }
 }
