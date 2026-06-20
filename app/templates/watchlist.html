@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}收藏清單 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>收藏清單</h2>
+    <p>查看目前已加入收藏的股票，並可從清單中移除。</p>
+</section>
+
+<section class="result-panel">
+    {% if message %}
+    <div class="success-box">{{ message }}</div>
+    {% endif %}
+    {% if error_message %}
+    <div class="error-box">{{ error_message }}</div>
+    {% endif %}
+
+    {% if items %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>股票代號</th>
+                    <th>股票名稱</th>
+                    <th>加入時間</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.stock_no }}</td>
+                    <td>{{ item.stock_name }}</td>
+                    <td>{{ item.created_at }}</td>
+                    <td>
+                        <form action="{{ url_for('remove_watchlist_item') }}" method="post">
+                            <input type="hidden" name="stock_no" value="{{ item.stock_no }}">
+                            <button type="submit">移除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="help-text">目前尚無收藏股票，先到查詢結果頁加入一筆吧。</p>
+    {% endif %}
+</section>
+{% endblock %}

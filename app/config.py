@@ -22,6 +22,10 @@ class Settings:
             "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY",
         )
         self.stock_query_date = os.getenv("STOCK_QUERY_DATE", "20240501")
+        self.watchlist_db_path = os.getenv(
+            "WATCHLIST_DB_PATH",
+            str(BASE_DIR / "data" / "watchlist.db"),
+        )
 
 
 @lru_cache

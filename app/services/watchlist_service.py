@@ -1,0 +1,76 @@
+from contextlib import closing
+from datetime import datetime
+import sqlite3
+
+from app.database import get_connection, init_database
+from app.models.watchlist import WatchlistItem
+
+
+class WatchlistServiceError(Exception):
+    """Base error for watchlist operations."""
+
+
+class InvalidWatchlistItemError(WatchlistServiceError):
+    """Raised when required watchlist data is missing or invalid."""
+
+
+class DuplicateWatchlistItemError(WatchlistServiceError):
+    """Raised when a stock is already in the watchlist."""
+
+
+class WatchlistItemNotFoundError(WatchlistServiceError):
+    """Raised when the stock is not found in the watchlist."""
+
+
+def add_to_watchlist(stock_no: str, stock_name: str, db_path: str | None = None) -> WatchlistItem:
+    normalized_stock_no = stock_no.strip()
+    normalized_stock_name = stock_name.strip()
+    if not normalized_stock_no or not normalized_stock_name:
+        raise InvalidWatchlistItemError("加入收藏失敗，缺少股票代號或股票名稱。")
+
+    init_database(db_path)
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with closing(get_connection(db_path)) as connection:
+            connection.execute(
+                "INSERT INTO watchlist (stock_no, stock_name, created_at) VALUES (?, ?, ?)",
+                (normalized_stock_no, normalized_stock_name, created_at),
+            )
+            connection.commit()
+    except sqlite3.IntegrityError as exc:
+        raise DuplicateWatchlistItemError("該股票已在收藏清單中，無法重複加入。") from exc
+
+    return WatchlistItem(
+        stock_no=normalized_stock_no,
+        stock_name=normalized_stock_name,
+        created_at=created_at,
+    )
+
+
+def list_watchlist(db_path: str | None = None) -> list[WatchlistItem]:
+    init_database(db_path)
+    with closing(get_connection(db_path)) as connection:
+        rows = connection.execute(
+            "SELECT stock_no, stock_name, created_at FROM watchlist ORDER BY created_at DESC, stock_no DESC"
+        ).fetchall()
+    return [
+        WatchlistItem(
+            stock_no=row["stock_no"],
+            stock_name=row["stock_name"],
+            created_at=row["created_at"],
+        )
+        for row in rows
+    ]
+
+
+def remove_from_watchlist(stock_no: str, db_path: str | None = None) -> None:
+    normalized_stock_no = stock_no.strip()
+    if not normalized_stock_no:
+        raise InvalidWatchlistItemError("移除收藏失敗，缺少股票代號。")
+
+    init_database(db_path)
+    with closing(get_connection(db_path)) as connection:
+        cursor = connection.execute("DELETE FROM watchlist WHERE stock_no = ?", (normalized_stock_no,))
+        connection.commit()
+    if cursor.rowcount == 0:
+        raise WatchlistItemNotFoundError("找不到要移除的收藏股票。")

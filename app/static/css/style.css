@@ -49,6 +49,18 @@ body {
     color: var(--muted);
 }
 
+.site-nav {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.site-nav a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .hero {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -134,6 +146,15 @@ body {
     background: #fff4f2;
     border: 1px solid #f1c3bc;
     color: #9a3412;
+}
+
+.success-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #eefaf6;
+    border: 1px solid #b8e3d5;
+    color: #0f5132;
 }
 
 .stock-summary {

@@ -10,6 +10,15 @@
 </section>
 
 <section class="result-panel">
+    <h3>收藏操作</h3>
+    <form action="{{ url_for('add_watchlist_item') }}" method="post">
+        <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
+        <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
+        <button type="submit">加入收藏清單</button>
+    </form>
+</section>
+
+<section class="result-panel">
     <h3>收盤價走勢圖</h3>
     {% if close_price_chart %}
     <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>

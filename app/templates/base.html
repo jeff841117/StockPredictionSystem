@@ -12,6 +12,10 @@
             <p class="eyebrow">StockPredictionSystem</p>
             <h1>{{ project_name }}</h1>
             <p class="subtitle">台股單一股票最小查詢流程</p>
+            <nav class="site-nav">
+                <a href="{{ url_for('index') }}">股票查詢</a>
+                <a href="{{ url_for('watchlist_page') }}">收藏清單</a>
+            </nav>
         </div>
     </header>
     <main class="container">

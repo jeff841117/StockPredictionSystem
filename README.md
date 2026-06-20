@@ -17,15 +17,21 @@
 app/
 ├─ main.py
 ├─ config.py
+├─ database.py
+├─ models/
+│  └─ watchlist.py
 ├─ routers/
 │  ├─ pages.py
-│  └─ stocks.py
+│  ├─ stocks.py
+│  └─ watchlist.py
 ├─ services/
-│  └─ stock_service.py
+│  ├─ stock_service.py
+│  └─ watchlist_service.py
 ├─ templates/
 │  ├─ base.html
 │  ├─ index.html
-│  └─ stock_detail.html
+│  ├─ stock_detail.html
+│  └─ watchlist.html
 └─ static/
    └─ css/
       └─ style.css
@@ -75,6 +81,7 @@ STOCK_QUERY_DATE=20240501
 - 使用方式：在首頁輸入單一台股代號，並指定開始日期與結束日期，例如 `2330` + `2024-05-01` 到 `2024-05-31`
 - 走勢圖方式：結果頁內嵌 SVG 收盤價折線圖
 - 技術指標：MA5、MA20（依查詢區間收盤價計算）
+- 收藏清單：SQLite 本機資料庫儲存最小 watchlist
 
 本輪會顯示：
 
@@ -92,10 +99,10 @@ STOCK_QUERY_DATE=20240501
 - MA20
 - 成交量
 - 收盤價走勢圖（X 軸為日期、Y 軸為收盤價，並疊加 MA5、MA20）
+- 收藏清單（股票代號、股票名稱、加入時間）
 
 ## 本輪不包含
 
-- 資料庫商業邏輯
 - 模擬交易功能
 - AI 預測功能
 - 使用者登入功能
