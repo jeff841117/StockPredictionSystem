@@ -27,4 +27,18 @@ def init_database(db_path: str | None = None) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                stock_no TEXT NOT NULL,
+                stock_name TEXT NOT NULL,
+                trade_type TEXT NOT NULL,
+                price TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                trade_time TEXT NOT NULL,
+                total_amount TEXT NOT NULL
+            )
+            """
+        )
         connection.commit()

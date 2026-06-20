@@ -19,6 +19,44 @@
 </section>
 
 <section class="result-panel">
+    <h3>模擬買進</h3>
+    <p>初始虛擬資金：{{ virtual_cash_summary.initial_cash }}</p>
+    <p>目前已使用：{{ virtual_cash_summary.used_cash }}</p>
+    <p>目前可用：{{ virtual_cash_summary.available_cash }}</p>
+
+    {% if trade_message %}
+    <div class="success-box">{{ trade_message }}</div>
+    {% endif %}
+    {% if trade_error_message %}
+    <div class="error-box">{{ trade_error_message }}</div>
+    {% endif %}
+
+    <form action="{{ url_for('buy_trade') }}" method="post">
+        <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
+        <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
+        <input type="hidden" name="start_date" value="{{ result.interval_start }}">
+        <input type="hidden" name="end_date" value="{{ result.interval_end }}">
+        <div class="search-row search-row-dates">
+            <div class="field-group">
+                <label for="buy_price">買進價格</label>
+                <input id="buy_price" name="buy_price" type="number" step="0.01" min="0.01" value="{{ result.rows[0].close_price }}" required>
+            </div>
+            <div class="field-group">
+                <label for="buy_quantity">買進股數</label>
+                <input id="buy_quantity" name="buy_quantity" type="number" min="1" step="1" value="1000" required>
+            </div>
+            <div class="field-group">
+                <label for="trade_time">買進時間</label>
+                <input id="trade_time" name="trade_time" type="datetime-local" value="{{ result.interval_end }}T09:00" required>
+            </div>
+        </div>
+        <div class="table-actions">
+            <button type="submit">確認模擬買進</button>
+        </div>
+    </form>
+</section>
+
+<section class="result-panel">
     <h3>收盤價走勢圖</h3>
     {% if close_price_chart %}
     <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>

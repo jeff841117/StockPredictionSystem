@@ -1,0 +1,20 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class TradeRecord:
+    id: int
+    stock_no: str
+    stock_name: str
+    trade_type: str
+    price: str
+    quantity: int
+    trade_time: str
+    total_amount: str
+
+
+@dataclass(frozen=True)
+class VirtualCashSummary:
+    initial_cash: str
+    used_cash: str
+    available_cash: str

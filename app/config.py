@@ -1,6 +1,7 @@
 from functools import lru_cache
 import os
 from pathlib import Path
+from decimal import Decimal
 
 from dotenv import load_dotenv
 
@@ -26,6 +27,7 @@ class Settings:
             "WATCHLIST_DB_PATH",
             str(BASE_DIR / "data" / "watchlist.db"),
         )
+        self.initial_virtual_cash = Decimal(os.getenv("INITIAL_VIRTUAL_CASH", "1000000"))
 
 
 @lru_cache

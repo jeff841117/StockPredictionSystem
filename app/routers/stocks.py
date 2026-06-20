@@ -14,6 +14,7 @@ from app.services.stock_service import (
     get_default_date_range,
     get_default_interval_label,
 )
+from app.services.trade_service import get_virtual_cash_summary
 
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
@@ -52,6 +53,8 @@ def search_stock(
     stock_no: str = Query(...),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
+    trade_message: str = Query(""),
+    trade_error_message: str = Query(""),
 ):
     try:
         result = fetch_stock_detail(stock_no, start_date, end_date)
@@ -71,5 +74,8 @@ def search_stock(
             "close_price_chart": build_close_price_chart(result),
             "project_name": settings.app_name,
             "result": result,
+            "trade_message": trade_message,
+            "trade_error_message": trade_error_message,
+            "virtual_cash_summary": get_virtual_cash_summary(),
         },
     )

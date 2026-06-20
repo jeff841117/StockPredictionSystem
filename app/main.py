@@ -7,6 +7,7 @@ from app.database import init_database
 from app.config import get_settings
 from app.routers.pages import router as pages_router
 from app.routers.stocks import router as stocks_router
+from app.routers.trades import router as trades_router
 from app.routers.watchlist import router as watchlist_router
 
 
@@ -21,6 +22,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(pages_router)
 app.include_router(stocks_router)
+app.include_router(trades_router)
 app.include_router(watchlist_router)
 init_database()
 
