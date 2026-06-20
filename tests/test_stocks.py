@@ -7,6 +7,7 @@ from app.main import app
 from app.schemas.stock import StockLookupResult, StockPriceRow
 from app.services.stock_service import (
     ExternalServiceError,
+    InvalidDateRangeError,
     StockNotFoundError,
     build_close_price_chart,
     fetch_stock_detail,
@@ -34,34 +35,32 @@ class StockSearchTests(unittest.TestCase):
                     close_price="821.00",
                     volume="90,177,283",
                     ma5="850.00",
-                    ma20="829.25",
+                    ma20="833.85",
                 ),
                 StockPriceRow(
-                    trade_date="2024-05-02",
-                    open_price="789.00",
-                    high_price="789.00",
-                    low_price="772.00",
-                    close_price="772.00",
-                    volume="47,536,363",
-                    ma5="-",
-                    ma20="-",
-                )
+                    trade_date="2024-05-30",
+                    open_price="841.00",
+                    high_price="848.00",
+                    low_price="838.00",
+                    close_price="838.00",
+                    volume="42,535,118",
+                    ma5="850.60",
+                    ma20="837.10",
+                ),
             ],
         )
 
-        response = self.client.get("/stocks/search", params={"stock_no": "2330"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("台積電", response.text)
-        self.assertIn("2024-05-31", response.text)
-        self.assertIn("查詢區間", response.text)
-        self.assertIn("資料筆數", response.text)
-        self.assertIn("顯示順序", response.text)
-        self.assertIn("成交量（股）", response.text)
-        self.assertIn("收盤價走勢圖", response.text)
-        self.assertIn("aria-label=\"收盤價走勢圖\"", response.text)
+        self.assertIn("2024-05-01 至 2024-05-31", response.text)
         self.assertIn("MA5", response.text)
         self.assertIn("MA20", response.text)
+        self.assertIn("aria-label=\"收盤價走勢圖\"", response.text)
         self.assertIn("850.00", response.text)
 
     @patch("app.routers.stocks.fetch_stock_detail")
@@ -70,7 +69,7 @@ class StockSearchTests(unittest.TestCase):
             stock_no="2330",
             stock_name="台積電",
             source_name="TWSE 每日成交資訊",
-            interval_start="2024-05-01",
+            interval_start="2024-05-31",
             interval_end="2024-05-31",
             rows=[
                 StockPriceRow(
@@ -80,19 +79,102 @@ class StockSearchTests(unittest.TestCase):
                     low_price="821.00",
                     close_price="821.00",
                     volume="90,177,283",
-                    ma5="-",
-                    ma20="-",
                 )
             ],
         )
 
-        response = self.client.get("/stocks/search", params={"stock_no": "2330"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-05-31", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("資料筆數不足，暫時無法繪製收盤價走勢圖", response.text)
 
+    @patch("app.routers.stocks.fetch_stock_detail")
+    def test_search_stock_not_found_message(self, mock_fetch) -> None:
+        mock_fetch.side_effect = StockNotFoundError(
+            "查無資料，請確認股票代號是否存在，或該查詢區間內是否有成交資料。"
+        )
+
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "9999", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("查詢區間內是否有成交資料", response.text)
+
+    def test_search_stock_invalid_date_order(self) -> None:
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-06-01", "end_date": "2024-05-01"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("開始日期不可晚於結束日期", response.text)
+
+    def test_search_stock_invalid_date_format(self) -> None:
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024/05/01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("日期格式錯誤", response.text)
+
+    def test_search_stock_missing_date(self) -> None:
+        response = self.client.get("/stocks/search", params={"stock_no": "2330", "start_date": "2024-05-01"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("請輸入開始日期與結束日期", response.text)
+
+    @patch("app.services.stock_service.requests.get")
+    def test_fetch_stock_detail_twse_not_found_message(self, mock_get) -> None:
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"stat": "很抱歉，沒有符合條件的資料!"}
+        mock_get.return_value = mock_response
+
+        with self.assertRaises(StockNotFoundError) as context:
+            fetch_stock_detail("9999", "2024-05-01", "2024-05-31")
+
+        self.assertIn("查詢區間內是否有成交資料", str(context.exception))
+
+    @patch("app.services.stock_service.requests.get")
+    def test_fetch_stock_detail_cross_month_query(self, mock_get) -> None:
+        may_response = Mock()
+        may_response.raise_for_status.return_value = None
+        may_response.json.return_value = {
+            "stat": "OK",
+            "title": "113年05月 2330 台積電 各日成交資訊",
+            "data": [
+                ["113/05/30", "1,000", "1", "100.00", "101.00", "99.00", "100.00", "0.00", "1", ""],
+                ["113/05/31", "1,000", "1", "101.00", "102.00", "100.00", "101.00", "0.00", "1", ""],
+            ],
+        }
+        june_response = Mock()
+        june_response.raise_for_status.return_value = None
+        june_response.json.return_value = {
+            "stat": "OK",
+            "title": "113年06月 2330 台積電 各日成交資訊",
+            "data": [
+                ["113/06/03", "1,000", "1", "102.00", "103.00", "101.00", "102.00", "0.00", "1", ""],
+                ["113/06/04", "1,000", "1", "103.00", "104.00", "102.00", "103.00", "0.00", "1", ""],
+            ],
+        }
+        mock_get.side_effect = [may_response, june_response]
+
+        result = fetch_stock_detail("2330", "2024-05-30", "2024-06-04")
+
+        self.assertEqual(result.interval_start, "2024-05-30")
+        self.assertEqual(result.interval_end, "2024-06-04")
+        self.assertEqual(result.rows[0].trade_date, "2024-06-04")
+        self.assertEqual(result.rows[-1].trade_date, "2024-05-30")
+        self.assertEqual(len(result.rows), 4)
+
     def test_fetch_stock_detail_adds_moving_averages(self) -> None:
-        result = fetch_stock_detail("2330")
+        result = fetch_stock_detail("2330", "2024-05-01", "2024-05-31")
 
         self.assertEqual(result.rows[0].trade_date, "2024-05-31")
         self.assertEqual(result.rows[0].ma5, "850.00")
@@ -105,8 +187,8 @@ class StockSearchTests(unittest.TestCase):
             stock_no="2330",
             stock_name="台積電",
             source_name="TWSE 每日成交資訊",
-            interval_start="2024-05-01",
-            interval_end="2024-05-31",
+            interval_start="2024-05-02",
+            interval_end="2024-05-06",
             rows=[
                 StockPriceRow(
                     trade_date="2024-05-06",
@@ -168,45 +250,29 @@ class StockSearchTests(unittest.TestCase):
         self.assertTrue(bool(chart.ma5_svg_path))
         self.assertEqual(chart.ma20_svg_path, "")
 
-    @patch("app.routers.stocks.fetch_stock_detail")
-    def test_search_stock_not_found_message(self, mock_fetch) -> None:
-        mock_fetch.side_effect = StockNotFoundError(
-            "查無資料，請確認股票代號是否存在，或該固定查詢區間內是否有成交資料。"
-        )
-
-        response = self.client.get("/stocks/search", params={"stock_no": "9999"})
-
-        self.assertEqual(response.status_code, 404)
-        self.assertIn("固定查詢區間內是否有成交資料", response.text)
-
-    @patch("app.services.stock_service.requests.get")
-    def test_fetch_stock_detail_twse_not_found_message(self, mock_get) -> None:
-        mock_response = Mock()
-        mock_response.raise_for_status.return_value = None
-        mock_response.json.return_value = {
-            "stat": "很抱歉，沒有符合條件的資料!"
-        }
-        mock_get.return_value = mock_response
-
-        with self.assertRaises(StockNotFoundError) as context:
-            fetch_stock_detail("9999")
-
-        self.assertIn("固定查詢區間內是否有成交資料", str(context.exception))
-
     def test_search_stock_invalid_code(self) -> None:
-        response = self.client.get("/stocks/search", params={"stock_no": "abcd"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "abcd", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("股票代號格式錯誤", response.text)
 
     def test_search_stock_invalid_code_with_short_length(self) -> None:
-        response = self.client.get("/stocks/search", params={"stock_no": "233"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "233", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("股票代號格式錯誤", response.text)
 
     def test_search_stock_invalid_code_with_long_length(self) -> None:
-        response = self.client.get("/stocks/search", params={"stock_no": "1234567"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "1234567", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("股票代號格式錯誤", response.text)
@@ -215,7 +281,10 @@ class StockSearchTests(unittest.TestCase):
     def test_search_stock_external_service_error(self, mock_fetch) -> None:
         mock_fetch.side_effect = ExternalServiceError("股票資料來源暫時無法使用，請稍後再試。")
 
-        response = self.client.get("/stocks/search", params={"stock_no": "2330"})
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
 
         self.assertEqual(response.status_code, 502)
         self.assertIn("股票資料來源暫時無法使用", response.text)

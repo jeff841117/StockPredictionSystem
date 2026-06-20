@@ -91,6 +91,14 @@ body {
     flex-wrap: wrap;
 }
 
+.search-row-dates {
+    margin-top: 16px;
+}
+
+.field-group {
+    flex: 1 1 220px;
+}
+
 .search-row input {
     flex: 1 1 220px;
     min-width: 0;
@@ -145,6 +153,43 @@ body {
 
 .table-wrapper {
     overflow-x: auto;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.legend-item {
+    position: relative;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.legend-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 12px;
+    height: 3px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+}
+
+.legend-item.close::before {
+    background: #0f766e;
+}
+
+.legend-item.ma5::before {
+    background: #ea580c;
+}
+
+.legend-item.ma20::before {
+    background: #2563eb;
 }
 
 table {

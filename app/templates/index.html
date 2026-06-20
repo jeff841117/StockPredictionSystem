@@ -4,9 +4,9 @@
 
 {% block content %}
 <section class="hero">
-    <h2>股票資料查詢最小版本</h2>
+    <h2>股票資料查詢</h2>
     <p>{{ message }}</p>
-    <p>固定查詢區間：{{ fixed_interval }}</p>
+    <p>預設查詢區間：{{ fixed_interval }}</p>
 </section>
 
 <section class="result-panel">
@@ -25,7 +25,29 @@
             >
             <button type="submit">查詢</button>
         </div>
-        <p class="help-text">本輪固定查詢區間，不提供前端切換日期。</p>
+        <div class="search-row search-row-dates">
+            <div class="field-group">
+                <label for="start_date">開始日期</label>
+                <input
+                    id="start_date"
+                    name="start_date"
+                    type="date"
+                    value="{{ start_date or '' }}"
+                    required
+                >
+            </div>
+            <div class="field-group">
+                <label for="end_date">結束日期</label>
+                <input
+                    id="end_date"
+                    name="end_date"
+                    type="date"
+                    value="{{ end_date or '' }}"
+                    required
+                >
+            </div>
+        </div>
+        <p class="help-text">可自行調整查詢區間；歷史資料、走勢圖與 MA5 / MA20 都會依此同步更新。</p>
     </form>
 
     {% if error_message %}
