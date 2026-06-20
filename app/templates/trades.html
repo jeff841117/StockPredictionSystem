@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}交易紀錄 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>交易紀錄</h2>
+    <p>查看目前已保存的模擬交易資料，預設依交易時間由新到舊顯示。</p>
+</section>
+
+<section class="result-panel">
+    <div class="stock-summary">
+        <div>
+            <span class="label">初始虛擬資金</span>
+            <strong>{{ virtual_cash_summary.initial_cash }}</strong>
+        </div>
+        <div>
+            <span class="label">已使用資金</span>
+            <strong>{{ virtual_cash_summary.used_cash }}</strong>
+        </div>
+        <div>
+            <span class="label">目前可用資金</span>
+            <strong>{{ virtual_cash_summary.available_cash }}</strong>
+        </div>
+    </div>
+
+    {% if trades %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>股票代號</th>
+                    <th>股票名稱</th>
+                    <th>交易類型</th>
+                    <th>價格</th>
+                    <th>股數</th>
+                    <th>交易時間</th>
+                    <th>交易總金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trade in trades %}
+                <tr>
+                    <td>{{ trade.stock_no }}</td>
+                    <td>{{ trade.stock_name }}</td>
+                    <td>{{ trade.trade_type }}</td>
+                    <td>{{ trade.price }}</td>
+                    <td>{{ trade.quantity }}</td>
+                    <td>{{ trade.trade_time }}</td>
+                    <td>{{ trade.total_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="help-text">目前尚無交易紀錄，先從股票查詢結果頁完成一筆模擬買進吧。</p>
+    {% endif %}
+</section>
+{% endblock %}

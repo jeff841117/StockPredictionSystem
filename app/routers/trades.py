@@ -1,16 +1,35 @@
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Form, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Form, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
+from app.config import BASE_DIR, get_settings
 from app.services.trade_service import (
     InsufficientFundsError,
     InvalidTradeInputError,
     create_buy_trade,
+    get_virtual_cash_summary,
+    list_trades,
 )
 
 
 router = APIRouter(prefix="/trades", tags=["trades"])
+templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+settings = get_settings()
+
+
+@router.get("", response_class=HTMLResponse)
+def trades_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="trades.html",
+        context={
+            "project_name": settings.app_name,
+            "trades": list_trades(),
+            "virtual_cash_summary": get_virtual_cash_summary(),
+        },
+    )
 
 
 @router.post("/buy")

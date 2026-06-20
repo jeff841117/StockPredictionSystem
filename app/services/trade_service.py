@@ -36,6 +36,32 @@ def get_virtual_cash_summary(db_path: str | None = None) -> VirtualCashSummary:
     )
 
 
+def list_trades(db_path: str | None = None) -> list[TradeRecord]:
+    init_database(db_path)
+    with closing(get_connection(db_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT id, stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount
+            FROM trades
+            ORDER BY trade_time DESC, id DESC
+            """
+        ).fetchall()
+
+    return [
+        TradeRecord(
+            id=row["id"],
+            stock_no=row["stock_no"],
+            stock_name=row["stock_name"],
+            trade_type=row["trade_type"],
+            price=_format_money(Decimal(str(row["price"]))),
+            quantity=row["quantity"],
+            trade_time=row["trade_time"],
+            total_amount=_format_money(Decimal(str(row["total_amount"]))),
+        )
+        for row in rows
+    ]
+
+
 def create_buy_trade(
     stock_no: str,
     stock_name: str,
