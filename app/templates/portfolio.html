@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}持股總覽 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>持股總覽</h2>
+    <p>依目前 BUY 交易資料彙總持股數量與加權平均成本。</p>
+</section>
+
+<section class="result-panel">
+    {% if positions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>股票代號</th>
+                    <th>股票名稱</th>
+                    <th>持股數量</th>
+                    <th>平均成本</th>
+                    <th>累計買進金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for position in positions %}
+                <tr>
+                    <td>{{ position.stock_no }}</td>
+                    <td>{{ position.stock_name }}</td>
+                    <td>{{ position.quantity }}</td>
+                    <td>{{ position.average_cost }}</td>
+                    <td>{{ position.total_buy_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="help-text">目前尚無持股資料，先完成一筆模擬買進吧。</p>
+    {% endif %}
+</section>
+{% endblock %}

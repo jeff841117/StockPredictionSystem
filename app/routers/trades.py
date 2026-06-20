@@ -9,6 +9,7 @@ from app.services.trade_service import (
     InsufficientFundsError,
     InvalidTradeInputError,
     create_buy_trade,
+    list_positions,
     get_virtual_cash_summary,
     list_trades,
 )
@@ -28,6 +29,18 @@ def trades_page(request: Request):
             "project_name": settings.app_name,
             "trades": list_trades(),
             "virtual_cash_summary": get_virtual_cash_summary(),
+        },
+    )
+
+
+@router.get("/portfolio", response_class=HTMLResponse)
+def portfolio_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="portfolio.html",
+        context={
+            "project_name": settings.app_name,
+            "positions": list_positions(),
         },
     )
 

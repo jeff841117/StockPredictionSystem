@@ -18,3 +18,12 @@ class VirtualCashSummary:
     initial_cash: str
     used_cash: str
     available_cash: str
+
+
+@dataclass(frozen=True)
+class PositionSummary:
+    stock_no: str
+    stock_name: str
+    quantity: int
+    average_cost: str
+    total_buy_amount: str

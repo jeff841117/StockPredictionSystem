@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 from app.config import get_settings
 from app.database import get_connection, init_database
-from app.models.trade import TradeRecord, VirtualCashSummary
+from app.models.trade import PositionSummary, TradeRecord, VirtualCashSummary
 
 
 settings = get_settings()
@@ -60,6 +60,40 @@ def list_trades(db_path: str | None = None) -> list[TradeRecord]:
         )
         for row in rows
     ]
+
+
+def list_positions(db_path: str | None = None) -> list[PositionSummary]:
+    init_database(db_path)
+    with closing(get_connection(db_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                stock_no,
+                stock_name,
+                SUM(quantity) AS total_quantity,
+                SUM(total_amount) AS total_buy_amount
+            FROM trades
+            WHERE trade_type = 'BUY'
+            GROUP BY stock_no, stock_name
+            ORDER BY stock_no ASC
+            """
+        ).fetchall()
+
+    positions: list[PositionSummary] = []
+    for row in rows:
+        total_quantity = int(row["total_quantity"])
+        total_buy_amount = Decimal(str(row["total_buy_amount"]))
+        average_cost = total_buy_amount / Decimal(total_quantity)
+        positions.append(
+            PositionSummary(
+                stock_no=row["stock_no"],
+                stock_name=row["stock_name"],
+                quantity=total_quantity,
+                average_cost=_format_money(average_cost),
+                total_buy_amount=_format_money(total_buy_amount),
+            )
+        )
+    return positions
 
 
 def create_buy_trade(

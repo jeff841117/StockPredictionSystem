@@ -12,6 +12,7 @@ from app.services.trade_service import (
     InvalidTradeInputError,
     create_buy_trade,
     get_virtual_cash_summary,
+    list_positions,
     list_trades,
 )
 
@@ -140,5 +141,45 @@ class TradeTests(unittest.TestCase):
         self.assertIn("2330", response.text)
         self.assertIn("台積電", response.text)
         self.assertIn("BUY", response.text)
+        self.assertIn("800.00", response.text)
+        self.assertIn("80,000.00", response.text)
+
+    def test_list_positions_weighted_average_cost(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_buy_trade("2330", "台積電", "1000", "50", "2024-06-01T09:00", self.db_path)
+
+        positions = list_positions(self.db_path)
+
+        self.assertEqual(len(positions), 1)
+        self.assertEqual(positions[0].stock_no, "2330")
+        self.assertEqual(positions[0].quantity, 150)
+        self.assertEqual(positions[0].average_cost, "866.67")
+        self.assertEqual(positions[0].total_buy_amount, "130,000.00")
+
+    def test_list_positions_multiple_stocks(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_buy_trade("2317", "鴻海", "120", "200", "2024-06-01T10:00", self.db_path)
+
+        positions = list_positions(self.db_path)
+
+        self.assertEqual(len(positions), 2)
+        self.assertEqual(positions[0].stock_no, "2317")
+        self.assertEqual(positions[1].stock_no, "2330")
+
+    def test_portfolio_page_shows_empty_message(self) -> None:
+        response = self.client.get("/trades/portfolio")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("目前尚無持股資料", response.text)
+
+    def test_portfolio_page_shows_positions(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        response = self.client.get("/trades/portfolio")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("2330", response.text)
+        self.assertIn("台積電", response.text)
+        self.assertIn("100", response.text)
         self.assertIn("800.00", response.text)
         self.assertIn("80,000.00", response.text)

@@ -33,6 +33,7 @@ app/
 ├─ templates/
 │  ├─ base.html
 │  ├─ index.html
+│  ├─ portfolio.html
 │  ├─ stock_detail.html
 │  ├─ trades.html
 │  └─ watchlist.html
@@ -89,6 +90,7 @@ INITIAL_VIRTUAL_CASH=1000000
 - 收藏清單：SQLite 本機資料庫儲存最小 watchlist
 - 模擬買進：SQLite 本機資料庫儲存最小 BUY 交易紀錄
 - 交易紀錄：可查看已保存的 BUY 模擬交易資料
+- 持股總覽：依 BUY 交易彙總持股數量、平均成本與累計買進金額
 
 本輪會顯示：
 
@@ -109,6 +111,7 @@ INITIAL_VIRTUAL_CASH=1000000
 - 收藏清單（股票代號、股票名稱、加入時間）
 - 模擬買進（股票代號、股票名稱、價格、股數、時間）
 - 交易紀錄頁（股票代號、股票名稱、交易類型、價格、股數、時間、總金額）
+- 持股總覽頁（股票代號、股票名稱、持股數量、平均成本、累計買進金額）
 
 ## 本輪不包含
 
