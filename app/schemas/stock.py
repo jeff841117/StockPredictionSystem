@@ -8,6 +8,8 @@ class StockPriceRow(BaseModel):
     low_price: str
     close_price: str
     volume: str
+    ma5: str = "-"
+    ma20: str = "-"
 
 
 class ClosePriceChartPoint(BaseModel):
@@ -18,7 +20,9 @@ class ClosePriceChartPoint(BaseModel):
 
 class ClosePriceChart(BaseModel):
     points: list[ClosePriceChartPoint]
-    svg_path: str
+    close_price_svg_path: str
+    ma5_svg_path: str = ""
+    ma20_svg_path: str = ""
     min_price_label: str
     max_price_label: str
     start_date: str

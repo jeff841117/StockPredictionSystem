@@ -5,7 +5,12 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.schemas.stock import StockLookupResult, StockPriceRow
-from app.services.stock_service import ExternalServiceError, StockNotFoundError, fetch_stock_detail
+from app.services.stock_service import (
+    ExternalServiceError,
+    StockNotFoundError,
+    build_close_price_chart,
+    fetch_stock_detail,
+)
 
 
 class StockSearchTests(unittest.TestCase):
@@ -28,6 +33,8 @@ class StockSearchTests(unittest.TestCase):
                     low_price="821.00",
                     close_price="821.00",
                     volume="90,177,283",
+                    ma5="850.00",
+                    ma20="829.25",
                 ),
                 StockPriceRow(
                     trade_date="2024-05-02",
@@ -36,6 +43,8 @@ class StockSearchTests(unittest.TestCase):
                     low_price="772.00",
                     close_price="772.00",
                     volume="47,536,363",
+                    ma5="-",
+                    ma20="-",
                 )
             ],
         )
@@ -51,6 +60,9 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("成交量（股）", response.text)
         self.assertIn("收盤價走勢圖", response.text)
         self.assertIn("aria-label=\"收盤價走勢圖\"", response.text)
+        self.assertIn("MA5", response.text)
+        self.assertIn("MA20", response.text)
+        self.assertIn("850.00", response.text)
 
     @patch("app.routers.stocks.fetch_stock_detail")
     def test_search_stock_success_with_insufficient_rows_shows_chart_fallback(self, mock_fetch) -> None:
@@ -68,6 +80,8 @@ class StockSearchTests(unittest.TestCase):
                     low_price="821.00",
                     close_price="821.00",
                     volume="90,177,283",
+                    ma5="-",
+                    ma20="-",
                 )
             ],
         )
@@ -76,6 +90,83 @@ class StockSearchTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("資料筆數不足，暫時無法繪製收盤價走勢圖", response.text)
+
+    def test_fetch_stock_detail_adds_moving_averages(self) -> None:
+        result = fetch_stock_detail("2330")
+
+        self.assertEqual(result.rows[0].trade_date, "2024-05-31")
+        self.assertEqual(result.rows[0].ma5, "850.00")
+        self.assertEqual(result.rows[0].ma20, "833.85")
+        self.assertEqual(result.rows[-1].ma5, "-")
+        self.assertEqual(result.rows[-1].ma20, "-")
+
+    def test_build_close_price_chart_includes_ma_paths(self) -> None:
+        result = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-06",
+                    open_price="10.00",
+                    high_price="10.00",
+                    low_price="10.00",
+                    close_price="10.00",
+                    volume="1",
+                    ma5="8.00",
+                    ma20="-",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-05",
+                    open_price="9.00",
+                    high_price="9.00",
+                    low_price="9.00",
+                    close_price="9.00",
+                    volume="1",
+                    ma5="7.50",
+                    ma20="-",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-04",
+                    open_price="8.00",
+                    high_price="8.00",
+                    low_price="8.00",
+                    close_price="8.00",
+                    volume="1",
+                    ma5="7.00",
+                    ma20="-",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-03",
+                    open_price="7.00",
+                    high_price="7.00",
+                    low_price="7.00",
+                    close_price="7.00",
+                    volume="1",
+                    ma5="6.50",
+                    ma20="-",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-02",
+                    open_price="6.00",
+                    high_price="6.00",
+                    low_price="6.00",
+                    close_price="6.00",
+                    volume="1",
+                    ma5="6.00",
+                    ma20="-",
+                ),
+            ],
+        )
+
+        chart = build_close_price_chart(result)
+
+        self.assertIsNotNone(chart)
+        self.assertTrue(bool(chart.close_price_svg_path))
+        self.assertTrue(bool(chart.ma5_svg_path))
+        self.assertEqual(chart.ma20_svg_path, "")
 
     @patch("app.routers.stocks.fetch_stock_detail")
     def test_search_stock_not_found_message(self, mock_fetch) -> None:

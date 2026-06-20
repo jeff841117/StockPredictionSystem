@@ -38,6 +38,8 @@ def get_fixed_interval_label() -> str:
 def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None:
     chronological_rows = list(reversed(result.rows))
     points: list[ClosePriceChartPoint] = []
+    ma5_points: list[ClosePriceChartPoint] = []
+    ma20_points: list[ClosePriceChartPoint] = []
     for row in chronological_rows:
         try:
             close_price_value = float(row.close_price)
@@ -50,6 +52,22 @@ def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None
                 close_price_label=row.close_price,
             )
         )
+        if row.ma5 != "-":
+            ma5_points.append(
+                ClosePriceChartPoint(
+                    trade_date=row.trade_date,
+                    close_price=float(row.ma5),
+                    close_price_label=row.ma5,
+                )
+            )
+        if row.ma20 != "-":
+            ma20_points.append(
+                ClosePriceChartPoint(
+                    trade_date=row.trade_date,
+                    close_price=float(row.ma20),
+                    close_price_label=row.ma20,
+                )
+            )
 
     if len(points) < 2:
         return None
@@ -64,17 +82,46 @@ def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None
     usable_width = width - (padding_x * 2)
     usable_height = height - (padding_y * 2)
 
-    coordinates: list[str] = []
     total_points = len(points)
-    for index, point in enumerate(points):
-        x = padding_x if total_points == 1 else padding_x + (usable_width * index / (total_points - 1))
-        normalized_price = (point.close_price - min_price) / price_span
-        y = height - padding_y - (normalized_price * usable_height)
-        coordinates.append(f"{x:.2f},{y:.2f}")
 
     return ClosePriceChart(
         points=points,
-        svg_path=" ".join(coordinates),
+        close_price_svg_path=_build_svg_path(
+            points,
+            points,
+            total_points,
+            min_price,
+            price_span,
+            height,
+            padding_x,
+            padding_y,
+            usable_width,
+            usable_height,
+        ),
+        ma5_svg_path=_build_svg_path(
+            ma5_points,
+            points,
+            total_points,
+            min_price,
+            price_span,
+            height,
+            padding_x,
+            padding_y,
+            usable_width,
+            usable_height,
+        ),
+        ma20_svg_path=_build_svg_path(
+            ma20_points,
+            points,
+            total_points,
+            min_price,
+            price_span,
+            height,
+            padding_x,
+            padding_y,
+            usable_width,
+            usable_height,
+        ),
         min_price_label=f"{min_price:.2f}",
         max_price_label=f"{max_price:.2f}",
         start_date=points[0].trade_date,
@@ -150,7 +197,47 @@ def _parse_rows(raw_rows: list[list[str]]) -> list[StockPriceRow]:
                 volume=_normalize_int(row[1]),
             )
         )
+    _apply_moving_averages(rows)
     return list(reversed(rows))
+
+
+def _apply_moving_averages(rows: list[StockPriceRow]) -> None:
+    close_prices = [float(row.close_price) for row in rows]
+    for index, row in enumerate(rows):
+        row.ma5 = _format_average(close_prices, index, 5)
+        row.ma20 = _format_average(close_prices, index, 20)
+
+
+def _format_average(close_prices: list[float], index: int, window: int) -> str:
+    if index + 1 < window:
+        return "-"
+    values = close_prices[index - window + 1 : index + 1]
+    return f"{(sum(values) / window):.2f}"
+
+
+def _build_svg_path(
+    line_points: list[ClosePriceChartPoint],
+    axis_points: list[ClosePriceChartPoint],
+    total_points: int,
+    min_price: float,
+    price_span: float,
+    height: int,
+    padding_x: int,
+    padding_y: int,
+    usable_width: int,
+    usable_height: int,
+) -> str:
+    index_lookup = {point.trade_date: index for index, point in enumerate(axis_points)}
+    coordinates: list[str] = []
+    for point in line_points:
+        index = index_lookup.get(point.trade_date)
+        if index is None:
+            continue
+        x = padding_x if total_points == 1 else padding_x + (usable_width * index / (total_points - 1))
+        normalized_price = (point.close_price - min_price) / price_span
+        y = height - padding_y - (normalized_price * usable_height)
+        coordinates.append(f"{x:.2f},{y:.2f}")
+    return " ".join(coordinates)
 
 
 def _convert_roc_date(raw_value: str) -> str:

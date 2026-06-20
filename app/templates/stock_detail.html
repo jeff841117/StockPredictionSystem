@@ -13,6 +13,7 @@
     <h3>收盤價走勢圖</h3>
     {% if close_price_chart %}
     <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>
+    <p>MA5、MA20 依本次固定查詢區間的收盤價資料計算。</p>
     <div class="table-wrapper">
         <svg
             aria-label="收盤價走勢圖"
@@ -26,13 +27,34 @@
                 fill="none"
                 stroke="#0f766e"
                 stroke-width="3"
-                points="{{ close_price_chart.svg_path }}"
+                points="{{ close_price_chart.close_price_svg_path }}"
             />
+            {% if close_price_chart.ma5_svg_path %}
+            <polyline
+                fill="none"
+                stroke="#ea580c"
+                stroke-width="2"
+                points="{{ close_price_chart.ma5_svg_path }}"
+            />
+            {% endif %}
+            {% if close_price_chart.ma20_svg_path %}
+            <polyline
+                fill="none"
+                stroke="#2563eb"
+                stroke-width="2"
+                points="{{ close_price_chart.ma20_svg_path }}"
+            />
+            {% endif %}
             <text x="44" y="36" fill="#526072" font-size="12">最高 {{ close_price_chart.max_price_label }}</text>
             <text x="44" y="210" fill="#526072" font-size="12">最低 {{ close_price_chart.min_price_label }}</text>
             <text x="36" y="234" fill="#526072" font-size="12">{{ close_price_chart.start_date }}</text>
             <text x="520" y="234" fill="#526072" font-size="12">{{ close_price_chart.end_date }}</text>
         </svg>
+    </div>
+    <div class="chart-legend">
+        <span class="legend-item close">收盤價</span>
+        <span class="legend-item ma5">MA5</span>
+        <span class="legend-item ma20">MA20</span>
     </div>
     {% else %}
     <div class="error-box">
@@ -75,6 +97,8 @@
                 <tr>
                     <th>成交日期</th>
                     <th>收盤價</th>
+                    <th>MA5</th>
+                    <th>MA20</th>
                     <th>開盤價</th>
                     <th>最高價</th>
                     <th>最低價</th>
@@ -86,6 +110,8 @@
                 <tr>
                     <td>{{ row.trade_date }}</td>
                     <td>{{ row.close_price }}</td>
+                    <td>{{ row.ma5 }}</td>
+                    <td>{{ row.ma20 }}</td>
                     <td>{{ row.open_price }}</td>
                     <td>{{ row.high_price }}</td>
                     <td>{{ row.low_price }}</td>
