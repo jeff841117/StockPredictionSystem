@@ -110,6 +110,10 @@ python -m unittest discover -s tests -v
 4. 交易紀錄頁
 5. 持股總覽頁
 
+總驗收可直接參考：
+
+- [docs/features/mvp-v1-acceptance-summary.md](features/mvp-v1-acceptance-summary.md)
+
 ## 下一步候選方向
 
 文件整理輪完成後，可視需求優先考慮：

@@ -257,6 +257,7 @@ tests/
 - [docs/dev-workflow.md](docs/dev-workflow.md)
 - [docs/mvp-plan.md](docs/mvp-plan.md)
 - [docs/features/current-mvp-features.md](docs/features/current-mvp-features.md)
+- [docs/features/mvp-v1-acceptance-summary.md](docs/features/mvp-v1-acceptance-summary.md)
 
 ## 尚未完成項目
 

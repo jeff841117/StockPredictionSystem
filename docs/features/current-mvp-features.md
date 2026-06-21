@@ -2,6 +2,10 @@
 
 本文件整理目前已經落地的主要功能，供協作者快速查閱。
 
+若要進行 MVP 第一版總驗收，請優先搭配：
+
+- [mvp-v1-acceptance-summary.md](mvp-v1-acceptance-summary.md)
+
 ## 股票查詢
 
 - 單一台股代號查詢
