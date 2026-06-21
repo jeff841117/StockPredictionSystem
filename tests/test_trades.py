@@ -8,9 +8,11 @@ from app import database
 from app.database import init_database
 from app.main import app
 from app.services.trade_service import (
+    InsufficientHoldingsError,
     InsufficientFundsError,
     InvalidTradeInputError,
     create_buy_trade,
+    create_sell_trade,
     get_virtual_cash_summary,
     list_positions,
     list_trades,
@@ -60,6 +62,33 @@ class TradeTests(unittest.TestCase):
     def test_create_buy_trade_invalid_quantity(self) -> None:
         with self.assertRaises(InvalidTradeInputError):
             create_buy_trade("2330", "台積電", "800", "0", "2024-05-31T09:00", self.db_path)
+
+    def test_create_sell_trade_success(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        trade = create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
+        positions = list_positions(self.db_path)
+        summary = get_virtual_cash_summary(self.db_path)
+
+        self.assertEqual(trade.trade_type, "SELL")
+        self.assertEqual(trade.total_amount, "36,000.00")
+        self.assertEqual(positions[0].quantity, 60)
+        self.assertEqual(positions[0].average_cost, "800.00")
+        self.assertEqual(positions[0].total_buy_amount, "48,000.00")
+        self.assertEqual(summary.used_cash, "44,000.00")
+        self.assertEqual(summary.available_cash, "956,000.00")
+
+    def test_create_sell_trade_insufficient_holdings(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with self.assertRaises(InsufficientHoldingsError):
+            create_sell_trade("2330", "台積電", "900", "200", "2024-06-01T09:00", self.db_path)
+
+    def test_create_sell_trade_invalid_price(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with self.assertRaises(InvalidTradeInputError):
+            create_sell_trade("2330", "台積電", "0", "10", "2024-06-01T09:00", self.db_path)
 
     def test_buy_trade_route_success(self) -> None:
         response = self.client.post(
@@ -116,6 +145,42 @@ class TradeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 303)
         self.assertIn("trade_error_message=", response.headers["location"])
 
+    def test_sell_trade_route_success(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        response = self.client.post(
+            "/trades/sell",
+            data={
+                "stock_no": "2330",
+                "stock_name": "台積電",
+                "sell_price": "900",
+                "sell_quantity": "40",
+                "trade_time": "2024-06-01T09:00",
+            },
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/trades/portfolio")
+
+    def test_sell_trade_route_insufficient_holdings(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        response = self.client.post(
+            "/trades/sell",
+            data={
+                "stock_no": "2330",
+                "stock_name": "台積電",
+                "sell_price": "900",
+                "sell_quantity": "200",
+                "trade_time": "2024-06-01T09:00",
+            },
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("trade_error_message=", response.headers["location"])
+
     def test_list_trades_sorted_newest_first(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
         create_buy_trade("2317", "鴻海", "120", "200", "2024-06-01T10:00", self.db_path)
@@ -134,6 +199,7 @@ class TradeTests(unittest.TestCase):
 
     def test_trades_page_shows_saved_trades(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
 
         response = self.client.get("/trades")
 
@@ -141,6 +207,7 @@ class TradeTests(unittest.TestCase):
         self.assertIn("2330", response.text)
         self.assertIn("台積電", response.text)
         self.assertIn("BUY", response.text)
+        self.assertIn("SELL", response.text)
         self.assertIn("800.00", response.text)
         self.assertIn("80,000.00", response.text)
 
@@ -183,3 +250,12 @@ class TradeTests(unittest.TestCase):
         self.assertIn("100", response.text)
         self.assertIn("800.00", response.text)
         self.assertIn("80,000.00", response.text)
+
+    def test_portfolio_updates_after_sell(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
+
+        positions = list_positions(self.db_path)
+
+        self.assertEqual(positions[0].quantity, 60)
+        self.assertEqual(positions[0].average_cost, "800.00")

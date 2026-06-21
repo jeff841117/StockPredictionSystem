@@ -9,6 +9,10 @@
 </section>
 
 <section class="result-panel">
+    {% if trade_error_message %}
+    <div class="error-box">{{ trade_error_message }}</div>
+    {% endif %}
+
     {% if positions %}
     <div class="table-wrapper">
         <table>
@@ -29,6 +33,51 @@
                     <td>{{ position.quantity }}</td>
                     <td>{{ position.average_cost }}</td>
                     <td>{{ position.total_buy_amount }}</td>
+                </tr>
+                <tr>
+                    <td colspan="5">
+                        <form action="{{ url_for('sell_trade') }}" method="post">
+                            <input type="hidden" name="stock_no" value="{{ position.stock_no }}">
+                            <input type="hidden" name="stock_name" value="{{ position.stock_name }}">
+                            <div class="search-row search-row-dates">
+                                <div class="field-group">
+                                    <label for="sell_price_{{ position.stock_no }}">賣出價格</label>
+                                    <input
+                                        id="sell_price_{{ position.stock_no }}"
+                                        name="sell_price"
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        required
+                                    >
+                                </div>
+                                <div class="field-group">
+                                    <label for="sell_quantity_{{ position.stock_no }}">賣出股數</label>
+                                    <input
+                                        id="sell_quantity_{{ position.stock_no }}"
+                                        name="sell_quantity"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        max="{{ position.quantity }}"
+                                        required
+                                    >
+                                </div>
+                                <div class="field-group">
+                                    <label for="trade_time_{{ position.stock_no }}">賣出時間</label>
+                                    <input
+                                        id="trade_time_{{ position.stock_no }}"
+                                        name="trade_time"
+                                        type="datetime-local"
+                                        required
+                                    >
+                                </div>
+                            </div>
+                            <div class="table-actions">
+                                <button type="submit">模擬賣出 {{ position.stock_no }}</button>
+                            </div>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
