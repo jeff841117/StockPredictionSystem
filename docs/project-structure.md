@@ -1,380 +1,196 @@
-# 專案資料夾結構與模組責任分工
+# 專案結構與目前模組責任
 
-## 一、建議資料夾結構
+本文件描述的是「目前專案實作狀態」，不是未來理想架構草圖。  
+目標是讓協作者可以快速理解檔案放置位置與主要責任分工。
+
+## 目前專案結構
 
 ```text
-taiwan-stock-analysis/
+StockPredictionSystem/
 ├─ app/
 │  ├─ main.py
 │  ├─ config.py
 │  ├─ database.py
 │  ├─ models/
-│  │  ├─ stock.py
-│  │  ├─ watchlist.py
 │  │  ├─ trade.py
-│  │  └─ __init__.py
-│  ├─ schemas/
-│  │  ├─ stock.py
 │  │  ├─ watchlist.py
-│  │  ├─ trade.py
 │  │  └─ __init__.py
 │  ├─ routers/
 │  │  ├─ pages.py
 │  │  ├─ stocks.py
-│  │  ├─ watchlist.py
 │  │  ├─ trades.py
+│  │  ├─ watchlist.py
+│  │  └─ __init__.py
+│  ├─ schemas/
+│  │  ├─ stock.py
 │  │  └─ __init__.py
 │  ├─ services/
 │  │  ├─ stock_service.py
-│  │  ├─ indicator_service.py
-│  │  ├─ watchlist_service.py
 │  │  ├─ trade_service.py
-│  │  └─ portfolio_service.py
-│  ├─ repositories/
-│  │  ├─ stock_repository.py
-│  │  ├─ watchlist_repository.py
-│  │  ├─ trade_repository.py
+│  │  ├─ watchlist_service.py
 │  │  └─ __init__.py
 │  ├─ templates/
 │  │  ├─ base.html
 │  │  ├─ index.html
 │  │  ├─ stock_detail.html
 │  │  ├─ watchlist.html
-│  │  ├─ portfolio.html
-│  │  └─ trades.html
-│  ├─ static/
-│  │  ├─ css/
-│  │  │  └─ style.css
-│  │  └─ js/
-│  │     └─ main.js
-│  └─ utils/
-│     ├─ helpers.py
-│     ├─ date_utils.py
-│     └─ __init__.py
-├─ data/
-│  └─ app.db
+│  │  ├─ trades.html
+│  │  └─ portfolio.html
+│  └─ static/
+│     └─ css/
+│        └─ style.css
+├─ docs/
 ├─ tests/
 │  ├─ test_stocks.py
-│  ├─ test_watchlist.py
-│  └─ test_trades.py
-├─ docs/
-│  ├─ project-spec.md
-│  ├─ api-design.md
-│  ├─ database-design.md
-│  ├─ deployment.md
-│  ├─ finance-notes.md
-│  └─ learning-log.md
-├─ .env
+│  ├─ test_trades.py
+│  └─ test_watchlist.py
 ├─ .env.example
-├─ requirements.txt
 ├─ README.md
-└─ run.py
+└─ requirements.txt
 ```
 
-## 二、每個資料夾的用途
+## 核心模組說明
 
-## `app/`
+### `app/main.py`
 
-專案主程式區，幾乎所有核心程式都放這裡。
+- 建立 FastAPI 應用
+- 掛載靜態資源
+- 註冊各 router
+- 提供 `/health`
 
-## `app/main.py`
+### `app/config.py`
 
-系統入口。負責：
+- 統一管理環境變數與預設設定
+- 包含應用名稱、主機、連接埠、預設查詢月份、虛擬資金與 SQLite 路徑
 
-1. 建立 FastAPI app
-2. 載入 routers
-3. 掛載靜態檔案
-4. 設定模板引擎
+### `app/database.py`
 
-你可以把它想成整個網站的啟動中心。
-
-## `app/config.py`
-
-集中管理設定值，例如：
-
-1. 資料庫路徑
-2. API 金鑰
-3. 環境變數
-4. 預設查詢天數
-
-這樣之後改設定不用到處找。
-
-## `app/database.py`
-
-負責資料庫連線與初始化，例如：
-
-1. 建立 SQLite 連線
-2. 提供 Session
-3. 初始化資料表
-
-## `app/models/`
-
-放資料表模型。如果之後用 SQLAlchemy，這裡就是定義資料表的地方。
-
-例如：
-
-- `stock.py`：股票基本資料表
-- `watchlist.py`：收藏清單資料表
-- `trade.py`：模擬交易資料表
-
-它負責的是「資料長什麼樣」。
-
-## `app/schemas/`
-
-放 API 輸入輸出格式，通常會用 Pydantic 來定義。
-
-例如：
-
-- 建立收藏時要傳什麼欄位
-- 買入股票時表單要有哪些欄位
-- API 回傳格式長什麼樣
-
-它負責的是「資料怎麼進來、怎麼出去」。
+- 提供 SQLite 連線
+- 初始化 `watchlist` 與 `trades` 相關資料表
 
 ## `app/routers/`
 
-放路由，也就是網址對應的功能入口。
+### `pages.py`
 
-例如：
+- 首頁與靜態頁面入口
 
-- `pages.py`：網頁頁面路由
-- `stocks.py`：股票查詢 API
-- `watchlist.py`：收藏功能 API
-- `trades.py`：模擬交易 API
+### `stocks.py`
 
-它負責的是「收到請求後，把事情交給誰做」。
+- 股票查詢流程
+- 處理查詢參數、錯誤訊息與結果頁輸出
+
+### `watchlist.py`
+
+- 收藏清單新增、查看、移除
+
+### `trades.py`
+
+- 模擬 BUY / SELL
+- 交易紀錄頁
+- 持股總覽頁
 
 ## `app/services/`
 
-這層很重要，放商業邏輯，也就是系統真正的功能處理。
+### `stock_service.py`
 
-例如：
+- 向 TWSE 取得股票歷史資料
+- 解析日期區間資料
+- 計算 MA5 / MA20
+- 建立收盤價 SVG 圖表資料
+- 取得最近可用收盤價供持股估值使用
 
-- `stock_service.py`：抓股票資料、整理資料
-- `indicator_service.py`：計算 MA5、MA20
-- `watchlist_service.py`：處理收藏新增刪除
-- `trade_service.py`：處理買賣交易
-- `portfolio_service.py`：計算持股、成本、損益
+### `watchlist_service.py`
 
-它負責的是「這個功能實際怎麼運作」。
+- 處理收藏清單 CRUD
+- 檢查重複加入與缺少必要資料
 
-## `app/repositories/`
+### `trade_service.py`
 
-放資料存取邏輯，也就是把資料寫進資料庫、從資料庫讀出來。
+- 處理 BUY / SELL 驗證
+- 計算虛擬資金摘要
+- 整理交易紀錄
+- 彙總持股、平均成本、已實現損益
+- 計算未實現損益、市值與投資組合摘要
 
-例如：
+## `app/models/`
 
-- 新增收藏
-- 查詢交易紀錄
-- 取得持股資料
+### `watchlist.py`
 
-它負責的是「怎麼跟資料庫講話」。
+- 收藏項目資料結構
 
-如果你是新手，第一版也可以先不拆這層太細，先把簡單資料庫操作放在 service 裡。  
-但如果你想讓架構更清楚，保留這層會很好。
+### `trade.py`
+
+- 交易紀錄、資金摘要、持股摘要、已實現損益、未實現損益、投資組合摘要資料結構
+
+## `app/schemas/`
+
+### `stock.py`
+
+- 股票查詢結果、表格列資料、圖表資料等 schema
 
 ## `app/templates/`
 
-放 HTML 頁面模板。如果你用 `FastAPI + Jinja2`，畫面會放這裡。
+### `base.html`
 
-例如：
+- 共用版型與導覽
 
-- `index.html`：首頁
-- `stock_detail.html`：個股頁
-- `watchlist.html`：收藏頁
-- `portfolio.html`：持股與損益頁
-- `trades.html`：交易紀錄頁
+### `index.html`
 
-## `app/static/`
+- 首頁與股票查詢表單
 
-放靜態資源，例如：
+### `stock_detail.html`
 
-- CSS 樣式
-- JavaScript
-- 圖片
+- 股票查詢結果頁
+- 顯示摘要、表格、走勢圖、MA、收藏與模擬買進入口
 
-第一版先簡單即可，不要花太多時間做前端特效。
+### `watchlist.html`
 
-## `app/utils/`
+- 收藏清單頁
 
-放共用小工具，例如：
+### `trades.html`
 
-- 日期轉換
-- 格式化數字
-- 共用 helper 函式
+- 交易紀錄頁
+- 顯示 BUY / SELL 明細與已實現損益摘要
 
-這裡放「小而通用」的東西，不要把核心商業邏輯塞進來。
+### `portfolio.html`
 
-## `data/`
-
-放本機資料。第一版可以先放：
-
-- `app.db`：SQLite 資料庫
-
-如果之後改 PostgreSQL，這裡的角色就會變小。
+- 持股總覽頁
+- 顯示持股、未實現損益與投資組合摘要
+- 提供模擬賣出入口
 
 ## `tests/`
 
-放測試程式。第一版不需要全做，但至少可以保留位置。
+### `test_stocks.py`
 
-建議先測：
+- 股票查詢、日期驗證、外部來源錯誤、走勢圖、MA 等測試
 
-1. 股票查詢是否正常
-2. 收藏新增刪除是否正常
-3. 模擬交易計算是否正常
+### `test_watchlist.py`
 
-## `docs/`
+- 收藏清單新增、重複加入、移除與 route 驗證
 
-放專案文件。這對作品集很重要。
+### `test_trades.py`
 
-建議至少有：
+- BUY / SELL 驗證
+- 資金檢查
+- 交易紀錄排序
+- 持股、已實現 / 未實現損益與投資組合摘要
 
-1. 專案規格
-2. API 設計
-3. 資料庫設計
-4. 部署說明
-5. 金融知識補充
-6. 學習紀錄
+## 目前沒有採用的結構
 
-## 三、模組責任分工
+目前專案尚未拆出以下層：
 
-### 1. `stocks` 模組
+- `repositories/`
+- 獨立 `portfolio_service.py`
+- 完整 API versioning
+- migration 工具
 
-負責：
+原因是目前仍以 MVP 最小閉環為主，優先保持結構清楚但不過度抽象。
 
-1. 接收股票代號查詢
-2. 串接外部資料來源
-3. 整理歷史股價資料
-4. 回傳給頁面或 API
-5. 提供圖表所需資料
+## 後續擴充建議
 
-適合練習：
+若未來功能再擴大，可優先考慮：
 
-1. requests
-2. pandas
-3. JSON 解析
-4. 函式拆分
-
-### 2. `indicator` 模組
-
-負責：
-
-1. 計算 MA5
-2. 計算 MA20
-3. 整理技術指標欄位
-4. 供圖表或表格顯示
-
-適合練習：
-
-1. pandas rolling
-2. 欄位計算
-3. 資料前處理
-
-### 3. `watchlist` 模組
-
-負責：
-
-1. 加入收藏
-2. 移除收藏
-3. 查詢收藏清單
-
-適合練習：
-
-1. CRUD
-2. 路由設計
-3. 資料表操作
-
-### 4. `trades` 模組
-
-負責：
-
-1. 模擬買進
-2. 模擬賣出
-3. 儲存交易紀錄
-4. 基本交易檢查
-5. 避免賣出超過持股
-
-適合練習：
-
-1. 條件判斷
-2. 交易邏輯
-3. 例外處理
-4. 商業規則整理
-
-### 5. `portfolio` 模組
-
-負責：
-
-1. 彙總目前持股
-2. 計算平均成本
-3. 計算未實現損益
-4. 計算已實現損益
-5. 整理投資組合頁面資料
-
-適合練習：
-
-1. groupby
-2. 聚合計算
-3. 邏輯拆分
-4. 查詢結果整理
-
-### 6. `pages` 模組
-
-負責：
-
-1. 首頁顯示
-2. 個股查詢頁
-3. 收藏頁
-4. 交易紀錄頁
-5. 持股總覽頁
-
-這一層主要是讓你的作品能被看見、被操作。
-
-## 四、建議的責任分層原則
-
-你可以用這個簡單原則記：
-
-1. `router`：接請求
-2. `service`：做邏輯
-3. `repository`：碰資料庫
-4. `model`：定義資料表
-5. `schema`：定義輸入輸出
-6. `template`：顯示畫面
-
-如果之後寫到一半分不清該放哪，就用這個原則判斷。
-
-## 五、對新手最實用的簡化建議
-
-雖然上面架構是推薦版，但你第一版其實可以先適度簡化。
-
-### 可以先簡化的地方
-
-1. `repositories/` 可以先不拆太細
-2. `tests/` 可以先只寫最小範圍
-3. `utils/` 不要一開始放太多東西
-4. `schemas/` 先只寫真的有用到的輸入輸出格式
-
-### 不建議省略的地方
-
-1. `routers/`
-2. `services/`
-3. `templates/`
-4. `models/`
-5. `docs/`
-
-因為這幾個最能幫你養成好結構。
-
-## 六、你第一版最推薦的實作順序
-
-依照資料夾與模組，我建議順序是：
-
-1. 建 `app/main.py`
-2. 建 `routers/pages.py`
-3. 建 `templates/index.html`
-4. 建 `services/stock_service.py`
-5. 完成股票查詢功能
-6. 建 `models/` 與 `database.py`
-7. 完成 `watchlist` 功能
-8. 完成 `trades` 功能
-9. 完成 `portfolio` 功能
-10. 最後補 `docs/` 與 `tests/`
+1. 把資料庫讀寫邏輯拆成 repository 層
+2. 將持股、損益、摘要計算再細分成獨立 portfolio 模組
+3. 增加更多 schema 與 API 文件
+4. 導入 migration 流程
