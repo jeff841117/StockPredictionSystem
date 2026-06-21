@@ -4,7 +4,14 @@ from decimal import Decimal, InvalidOperation
 
 from app.config import get_settings
 from app.database import get_connection, init_database
-from app.models.trade import PositionSummary, RealizedPnlSummary, TradeRecord, UnrealizedPnlSummary, VirtualCashSummary
+from app.models.trade import (
+    PortfolioSummary,
+    PositionSummary,
+    RealizedPnlSummary,
+    TradeRecord,
+    UnrealizedPnlSummary,
+    VirtualCashSummary,
+)
 from app.services.stock_service import StockServiceError, get_latest_close_price
 
 
@@ -124,6 +131,32 @@ def get_portfolio_overview(db_path: str | None = None) -> tuple[list[PositionSum
         total_unrealized_pnl=_format_money(total_unrealized_pnl),
         priced_position_count=priced_position_count,
         missing_price_count=missing_price_count,
+    )
+
+
+def get_portfolio_summary(db_path: str | None = None) -> PortfolioSummary:
+    virtual_cash_summary = get_virtual_cash_summary(db_path)
+    realized_pnl_summary = get_realized_pnl_summary(db_path)
+    positions, unrealized_pnl_summary = get_portfolio_overview(db_path)
+
+    holdings_market_value = Decimal("0")
+    for position in positions:
+        if position.market_value == "-":
+            continue
+        holdings_market_value += Decimal(position.market_value.replace(",", ""))
+
+    available_cash = Decimal(virtual_cash_summary.available_cash.replace(",", ""))
+    total_asset_estimate = available_cash + holdings_market_value
+
+    return PortfolioSummary(
+        initial_cash=virtual_cash_summary.initial_cash,
+        available_cash=virtual_cash_summary.available_cash,
+        used_cash=virtual_cash_summary.used_cash,
+        holdings_market_value=_format_money(holdings_market_value),
+        total_realized_pnl=realized_pnl_summary.total_realized_pnl,
+        total_unrealized_pnl=unrealized_pnl_summary.total_unrealized_pnl,
+        total_asset_estimate=_format_money(total_asset_estimate),
+        missing_price_count=unrealized_pnl_summary.missing_price_count,
     )
 
 

@@ -15,6 +15,7 @@ from app.services.trade_service import (
     create_buy_trade,
     create_sell_trade,
     get_portfolio_overview,
+    get_portfolio_summary,
     get_realized_pnl_summary,
     get_virtual_cash_summary,
     list_positions,
@@ -243,6 +244,8 @@ class TradeTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("目前尚無持股資料", response.text)
+        self.assertIn("初始虛擬資金", response.text)
+        self.assertIn("1,000,000.00", response.text)
 
     def test_portfolio_page_shows_positions(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
@@ -259,6 +262,8 @@ class TradeTests(unittest.TestCase):
         self.assertIn("850.00", response.text)
         self.assertIn("85,000.00", response.text)
         self.assertIn("5,000.00", response.text)
+        self.assertIn("920,000.00", response.text)
+        self.assertIn("1,005,000.00", response.text)
 
     def test_portfolio_updates_after_sell(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
@@ -352,4 +357,45 @@ class TradeTests(unittest.TestCase):
         self.assertIn("最近收盤價暫時無法取得", positions[0].price_note)
         self.assertEqual(summary.total_unrealized_pnl, "0.00")
         self.assertEqual(summary.priced_position_count, 0)
+        self.assertEqual(summary.missing_price_count, 1)
+
+    def test_portfolio_summary_with_positions(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
+
+        with patch("app.services.trade_service.get_latest_close_price", return_value="850.00"):
+            summary = get_portfolio_summary(self.db_path)
+
+        self.assertEqual(summary.initial_cash, "1,000,000.00")
+        self.assertEqual(summary.available_cash, "956,000.00")
+        self.assertEqual(summary.used_cash, "44,000.00")
+        self.assertEqual(summary.holdings_market_value, "51,000.00")
+        self.assertEqual(summary.total_realized_pnl, "4,000.00")
+        self.assertEqual(summary.total_unrealized_pnl, "3,000.00")
+        self.assertEqual(summary.total_asset_estimate, "1,007,000.00")
+        self.assertEqual(summary.missing_price_count, 0)
+
+    def test_portfolio_summary_without_positions(self) -> None:
+        summary = get_portfolio_summary(self.db_path)
+
+        self.assertEqual(summary.initial_cash, "1,000,000.00")
+        self.assertEqual(summary.available_cash, "1,000,000.00")
+        self.assertEqual(summary.used_cash, "0.00")
+        self.assertEqual(summary.holdings_market_value, "0.00")
+        self.assertEqual(summary.total_realized_pnl, "0.00")
+        self.assertEqual(summary.total_unrealized_pnl, "0.00")
+        self.assertEqual(summary.total_asset_estimate, "1,000,000.00")
+        self.assertEqual(summary.missing_price_count, 0)
+
+    def test_portfolio_summary_handles_missing_price(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with patch("app.services.trade_service.get_latest_close_price", return_value=None):
+            summary = get_portfolio_summary(self.db_path)
+
+        self.assertEqual(summary.available_cash, "920,000.00")
+        self.assertEqual(summary.used_cash, "80,000.00")
+        self.assertEqual(summary.holdings_market_value, "0.00")
+        self.assertEqual(summary.total_unrealized_pnl, "0.00")
+        self.assertEqual(summary.total_asset_estimate, "920,000.00")
         self.assertEqual(summary.missing_price_count, 1)

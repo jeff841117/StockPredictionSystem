@@ -12,6 +12,7 @@ from app.services.trade_service import (
     create_buy_trade,
     create_sell_trade,
     get_portfolio_overview,
+    get_portfolio_summary,
     get_realized_pnl_summary,
     get_virtual_cash_summary,
     list_trades,
@@ -43,12 +44,14 @@ def portfolio_page(
     trade_error_message: str = Query(""),
 ):
     positions, unrealized_pnl_summary = get_portfolio_overview()
+    portfolio_summary = get_portfolio_summary()
     return templates.TemplateResponse(
         request=request,
         name="portfolio.html",
         context={
             "project_name": settings.app_name,
             "positions": positions,
+            "portfolio_summary": portfolio_summary,
             "trade_error_message": trade_error_message,
             "unrealized_pnl_summary": unrealized_pnl_summary,
         },

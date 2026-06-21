@@ -44,3 +44,15 @@ class UnrealizedPnlSummary:
     total_unrealized_pnl: str
     priced_position_count: int = 0
     missing_price_count: int = 0
+
+
+@dataclass(frozen=True)
+class PortfolioSummary:
+    initial_cash: str
+    available_cash: str
+    used_cash: str
+    holdings_market_value: str
+    total_realized_pnl: str
+    total_unrealized_pnl: str
+    total_asset_estimate: str
+    missing_price_count: int = 0
