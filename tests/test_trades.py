@@ -13,6 +13,7 @@ from app.services.trade_service import (
     InvalidTradeInputError,
     create_buy_trade,
     create_sell_trade,
+    get_realized_pnl_summary,
     get_virtual_cash_summary,
     list_positions,
     list_trades,
@@ -72,6 +73,7 @@ class TradeTests(unittest.TestCase):
 
         self.assertEqual(trade.trade_type, "SELL")
         self.assertEqual(trade.total_amount, "36,000.00")
+        self.assertEqual(trade.realized_pnl, "4,000.00")
         self.assertEqual(positions[0].quantity, 60)
         self.assertEqual(positions[0].average_cost, "800.00")
         self.assertEqual(positions[0].total_buy_amount, "48,000.00")
@@ -210,6 +212,7 @@ class TradeTests(unittest.TestCase):
         self.assertIn("SELL", response.text)
         self.assertIn("800.00", response.text)
         self.assertIn("80,000.00", response.text)
+        self.assertIn("4,000.00", response.text)
 
     def test_list_positions_weighted_average_cost(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
@@ -259,3 +262,43 @@ class TradeTests(unittest.TestCase):
 
         self.assertEqual(positions[0].quantity, 60)
         self.assertEqual(positions[0].average_cost, "800.00")
+
+    def test_realized_pnl_single_sell(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
+
+        trades = list_trades(self.db_path)
+        summary = get_realized_pnl_summary(self.db_path)
+
+        self.assertEqual(trades[0].trade_type, "SELL")
+        self.assertEqual(trades[0].realized_pnl, "4,000.00")
+        self.assertEqual(summary.total_realized_pnl, "4,000.00")
+
+    def test_realized_pnl_weighted_average_after_multiple_buys(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_buy_trade("2330", "台積電", "1000", "50", "2024-06-01T09:00", self.db_path)
+        sell = create_sell_trade("2330", "台積電", "900", "60", "2024-06-02T09:00", self.db_path)
+
+        self.assertEqual(sell.realized_pnl, "2,000.00")
+
+    def test_realized_pnl_accumulates_multiple_sells(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "900", "40", "2024-06-01T09:00", self.db_path)
+        create_sell_trade("2330", "台積電", "700", "20", "2024-06-02T09:00", self.db_path)
+
+        summary = get_realized_pnl_summary(self.db_path)
+        trades = list_trades(self.db_path)
+
+        self.assertEqual(summary.total_realized_pnl, "2,000.00")
+        sell_trades = [trade for trade in trades if trade.trade_type == "SELL"]
+        self.assertEqual(sell_trades[0].realized_pnl, "-2,000.00")
+        self.assertEqual(sell_trades[1].realized_pnl, "4,000.00")
+
+    def test_realized_pnl_not_counted_for_buy_only(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        trades = list_trades(self.db_path)
+        summary = get_realized_pnl_summary(self.db_path)
+
+        self.assertEqual(trades[0].realized_pnl, "-")
+        self.assertEqual(summary.total_realized_pnl, "0.00")

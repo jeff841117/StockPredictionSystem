@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 from app.config import get_settings
 from app.database import get_connection, init_database
-from app.models.trade import PositionSummary, TradeRecord, VirtualCashSummary
+from app.models.trade import PositionSummary, RealizedPnlSummary, TradeRecord, VirtualCashSummary
 
 
 settings = get_settings()
@@ -48,80 +48,12 @@ def get_virtual_cash_summary(db_path: str | None = None) -> VirtualCashSummary:
 
 
 def list_trades(db_path: str | None = None) -> list[TradeRecord]:
-    init_database(db_path)
-    with closing(get_connection(db_path)) as connection:
-        rows = connection.execute(
-            """
-            SELECT id, stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount
-            FROM trades
-            ORDER BY trade_time DESC, id DESC
-            """
-        ).fetchall()
-
-    return [
-        TradeRecord(
-            id=row["id"],
-            stock_no=row["stock_no"],
-            stock_name=row["stock_name"],
-            trade_type=row["trade_type"],
-            price=_format_money(Decimal(str(row["price"]))),
-            quantity=row["quantity"],
-            trade_time=row["trade_time"],
-            total_amount=_format_money(Decimal(str(row["total_amount"]))),
-        )
-        for row in rows
-    ]
+    _, trade_records, _ = _build_trade_ledger(db_path)
+    return list(reversed(trade_records))
 
 
 def list_positions(db_path: str | None = None) -> list[PositionSummary]:
-    init_database(db_path)
-    with closing(get_connection(db_path)) as connection:
-        rows = connection.execute(
-            """
-            SELECT
-                id,
-                stock_no,
-                stock_name,
-                trade_type,
-                quantity,
-                price,
-                total_amount,
-                trade_time
-            FROM trades
-            ORDER BY trade_time ASC, id ASC
-            """
-        ).fetchall()
-
-    raw_positions: dict[str, dict[str, Decimal | int | str]] = {}
-    for row in rows:
-        stock_no = row["stock_no"]
-        if stock_no not in raw_positions:
-            raw_positions[stock_no] = {
-                "stock_name": row["stock_name"],
-                "quantity": 0,
-                "cost_basis": Decimal("0"),
-            }
-
-        state = raw_positions[stock_no]
-        quantity = int(row["quantity"])
-        price = Decimal(str(row["price"]))
-        cost_basis = Decimal(str(state["cost_basis"]))
-        current_quantity = int(state["quantity"])
-
-        if row["trade_type"] == "BUY":
-            state["quantity"] = current_quantity + quantity
-            state["cost_basis"] = cost_basis + (price * quantity)
-            continue
-
-        if current_quantity <= 0:
-            continue
-
-        average_cost = cost_basis / Decimal(current_quantity)
-        remaining_quantity = current_quantity - quantity
-        remaining_cost_basis = cost_basis - (average_cost * quantity)
-        state["quantity"] = max(remaining_quantity, 0)
-        state["cost_basis"] = remaining_cost_basis if remaining_quantity > 0 else Decimal("0")
-
+    raw_positions, _, _ = _build_trade_ledger(db_path)
     positions: list[PositionSummary] = []
     for stock_no in sorted(raw_positions.keys()):
         state = raw_positions[stock_no]
@@ -140,6 +72,11 @@ def list_positions(db_path: str | None = None) -> list[PositionSummary]:
             )
         )
     return positions
+
+
+def get_realized_pnl_summary(db_path: str | None = None) -> RealizedPnlSummary:
+    _, _, total_realized_pnl = _build_trade_ledger(db_path)
+    return RealizedPnlSummary(total_realized_pnl=_format_money(total_realized_pnl))
 
 
 def create_buy_trade(
@@ -246,7 +183,15 @@ def create_sell_trade(
     if position is None or quantity > position.quantity:
         raise InsufficientHoldingsError("目前持股不足，無法完成此次賣出。")
 
+    raw_positions, _, _ = _build_trade_ledger(db_path)
+    state = raw_positions.get(normalized_stock_no)
+    if state is None:
+        raise InsufficientHoldingsError("目前持股不足，無法完成此次賣出。")
+    current_quantity = int(state["quantity"])
+    cost_basis = Decimal(str(state["cost_basis"]))
+    average_cost = cost_basis / Decimal(current_quantity)
     total_amount = price * quantity
+    realized_pnl = total_amount - (average_cost * quantity)
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         cursor = connection.execute(
@@ -274,6 +219,7 @@ def create_sell_trade(
         quantity=quantity,
         trade_time=trade_time.strftime("%Y-%m-%d %H:%M:%S"),
         total_amount=_format_money(total_amount),
+        realized_pnl=_format_money(realized_pnl),
     )
 
 
@@ -283,3 +229,75 @@ def _format_money(amount: Decimal) -> str:
 
 def _format_storage_amount(amount: Decimal) -> str:
     return f"{amount:.2f}"
+
+
+def _build_trade_ledger(
+    db_path: str | None = None,
+) -> tuple[dict[str, dict[str, Decimal | int | str]], list[TradeRecord], Decimal]:
+    init_database(db_path)
+    with closing(get_connection(db_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                id,
+                stock_no,
+                stock_name,
+                trade_type,
+                quantity,
+                price,
+                total_amount,
+                trade_time
+            FROM trades
+            ORDER BY trade_time ASC, id ASC
+            """
+        ).fetchall()
+
+    raw_positions: dict[str, dict[str, Decimal | int | str]] = {}
+    trade_records: list[TradeRecord] = []
+    total_realized_pnl = Decimal("0")
+
+    for row in rows:
+        stock_no = row["stock_no"]
+        if stock_no not in raw_positions:
+            raw_positions[stock_no] = {
+                "stock_name": row["stock_name"],
+                "quantity": 0,
+                "cost_basis": Decimal("0"),
+            }
+
+        state = raw_positions[stock_no]
+        quantity = int(row["quantity"])
+        price = Decimal(str(row["price"]))
+        total_amount = Decimal(str(row["total_amount"]))
+        cost_basis = Decimal(str(state["cost_basis"]))
+        current_quantity = int(state["quantity"])
+        realized_pnl = None
+
+        if row["trade_type"] == "BUY":
+            state["quantity"] = current_quantity + quantity
+            state["cost_basis"] = cost_basis + total_amount
+        else:
+            if current_quantity > 0:
+                average_cost = cost_basis / Decimal(current_quantity)
+                realized_pnl = total_amount - (average_cost * quantity)
+                remaining_quantity = current_quantity - quantity
+                remaining_cost_basis = cost_basis - (average_cost * quantity)
+                state["quantity"] = max(remaining_quantity, 0)
+                state["cost_basis"] = remaining_cost_basis if remaining_quantity > 0 else Decimal("0")
+                total_realized_pnl += realized_pnl
+
+        trade_records.append(
+            TradeRecord(
+                id=row["id"],
+                stock_no=stock_no,
+                stock_name=row["stock_name"],
+                trade_type=row["trade_type"],
+                price=_format_money(price),
+                quantity=quantity,
+                trade_time=row["trade_time"],
+                total_amount=_format_money(total_amount),
+                realized_pnl=_format_money(realized_pnl) if realized_pnl is not None else "-",
+            )
+        )
+
+    return raw_positions, trade_records, total_realized_pnl

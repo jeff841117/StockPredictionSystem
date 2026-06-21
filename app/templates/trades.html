@@ -22,6 +22,10 @@
             <span class="label">目前可用資金</span>
             <strong>{{ virtual_cash_summary.available_cash }}</strong>
         </div>
+        <div>
+            <span class="label">累計已實現損益</span>
+            <strong>{{ realized_pnl_summary.total_realized_pnl }}</strong>
+        </div>
     </div>
 
     {% if trades %}
@@ -36,6 +40,7 @@
                     <th>股數</th>
                     <th>交易時間</th>
                     <th>交易總金額</th>
+                    <th>已實現損益</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,6 +53,7 @@
                     <td>{{ trade.quantity }}</td>
                     <td>{{ trade.trade_time }}</td>
                     <td>{{ trade.total_amount }}</td>
+                    <td>{{ trade.realized_pnl }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

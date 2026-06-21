@@ -11,6 +11,7 @@ from app.services.trade_service import (
     InvalidTradeInputError,
     create_buy_trade,
     create_sell_trade,
+    get_realized_pnl_summary,
     list_positions,
     get_virtual_cash_summary,
     list_trades,
@@ -29,6 +30,7 @@ def trades_page(request: Request):
         name="trades.html",
         context={
             "project_name": settings.app_name,
+            "realized_pnl_summary": get_realized_pnl_summary(),
             "trades": list_trades(),
             "virtual_cash_summary": get_virtual_cash_summary(),
         },

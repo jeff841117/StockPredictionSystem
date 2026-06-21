@@ -11,6 +11,7 @@ class TradeRecord:
     quantity: int
     trade_time: str
     total_amount: str
+    realized_pnl: str = "-"
 
 
 @dataclass(frozen=True)
@@ -27,3 +28,8 @@ class PositionSummary:
     quantity: int
     average_cost: str
     total_buy_amount: str
+
+
+@dataclass(frozen=True)
+class RealizedPnlSummary:
+    total_realized_pnl: str
