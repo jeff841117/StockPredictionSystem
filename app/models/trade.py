@@ -28,8 +28,19 @@ class PositionSummary:
     quantity: int
     average_cost: str
     total_buy_amount: str
+    current_price: str = "-"
+    market_value: str = "-"
+    unrealized_pnl: str = "-"
+    price_note: str = ""
 
 
 @dataclass(frozen=True)
 class RealizedPnlSummary:
     total_realized_pnl: str
+
+
+@dataclass(frozen=True)
+class UnrealizedPnlSummary:
+    total_unrealized_pnl: str
+    priced_position_count: int = 0
+    missing_price_count: int = 0

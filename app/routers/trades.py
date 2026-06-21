@@ -11,8 +11,8 @@ from app.services.trade_service import (
     InvalidTradeInputError,
     create_buy_trade,
     create_sell_trade,
+    get_portfolio_overview,
     get_realized_pnl_summary,
-    list_positions,
     get_virtual_cash_summary,
     list_trades,
 )
@@ -42,13 +42,15 @@ def portfolio_page(
     request: Request,
     trade_error_message: str = Query(""),
 ):
+    positions, unrealized_pnl_summary = get_portfolio_overview()
     return templates.TemplateResponse(
         request=request,
         name="portfolio.html",
         context={
             "project_name": settings.app_name,
-            "positions": list_positions(),
+            "positions": positions,
             "trade_error_message": trade_error_message,
+            "unrealized_pnl_summary": unrealized_pnl_summary,
         },
     )
 

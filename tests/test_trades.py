@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,7 @@ from app.services.trade_service import (
     InvalidTradeInputError,
     create_buy_trade,
     create_sell_trade,
+    get_portfolio_overview,
     get_realized_pnl_summary,
     get_virtual_cash_summary,
     list_positions,
@@ -245,7 +247,8 @@ class TradeTests(unittest.TestCase):
     def test_portfolio_page_shows_positions(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
 
-        response = self.client.get("/trades/portfolio")
+        with patch("app.services.trade_service.get_latest_close_price", return_value="850.00"):
+            response = self.client.get("/trades/portfolio")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("2330", response.text)
@@ -253,6 +256,9 @@ class TradeTests(unittest.TestCase):
         self.assertIn("100", response.text)
         self.assertIn("800.00", response.text)
         self.assertIn("80,000.00", response.text)
+        self.assertIn("850.00", response.text)
+        self.assertIn("85,000.00", response.text)
+        self.assertIn("5,000.00", response.text)
 
     def test_portfolio_updates_after_sell(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
@@ -302,3 +308,48 @@ class TradeTests(unittest.TestCase):
 
         self.assertEqual(trades[0].realized_pnl, "-")
         self.assertEqual(summary.total_realized_pnl, "0.00")
+
+    def test_portfolio_overview_single_position_unrealized_pnl(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with patch("app.services.trade_service.get_latest_close_price", return_value="850.00"):
+            positions, summary = get_portfolio_overview(self.db_path)
+
+        self.assertEqual(len(positions), 1)
+        self.assertEqual(positions[0].current_price, "850.00")
+        self.assertEqual(positions[0].market_value, "85,000.00")
+        self.assertEqual(positions[0].unrealized_pnl, "5,000.00")
+        self.assertEqual(summary.total_unrealized_pnl, "5,000.00")
+        self.assertEqual(summary.priced_position_count, 1)
+        self.assertEqual(summary.missing_price_count, 0)
+
+    def test_portfolio_overview_multiple_stocks_unrealized_summary(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+        create_buy_trade("2317", "鴻海", "120", "200", "2024-06-01T10:00", self.db_path)
+
+        with patch(
+            "app.services.trade_service.get_latest_close_price",
+            side_effect=lambda stock_no: {"2330": "850.00", "2317": "118.00"}[stock_no],
+        ):
+            positions, summary = get_portfolio_overview(self.db_path)
+
+        self.assertEqual(len(positions), 2)
+        self.assertEqual(summary.total_unrealized_pnl, "4,600.00")
+        self.assertEqual(summary.priced_position_count, 2)
+        self.assertEqual(summary.missing_price_count, 0)
+        self.assertEqual(positions[0].unrealized_pnl, "-400.00")
+        self.assertEqual(positions[1].unrealized_pnl, "5,000.00")
+
+    def test_portfolio_overview_handles_missing_price(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with patch("app.services.trade_service.get_latest_close_price", return_value=None):
+            positions, summary = get_portfolio_overview(self.db_path)
+
+        self.assertEqual(positions[0].current_price, "-")
+        self.assertEqual(positions[0].market_value, "-")
+        self.assertEqual(positions[0].unrealized_pnl, "-")
+        self.assertIn("最近收盤價暫時無法取得", positions[0].price_note)
+        self.assertEqual(summary.total_unrealized_pnl, "0.00")
+        self.assertEqual(summary.priced_position_count, 0)
+        self.assertEqual(summary.missing_price_count, 1)

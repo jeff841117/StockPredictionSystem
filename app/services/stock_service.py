@@ -142,6 +142,22 @@ def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None
     )
 
 
+def get_latest_close_price(stock_no: str, months_to_check: int = 3) -> str | None:
+    normalized_stock_no = stock_no.strip()
+    if not STOCK_NO_PATTERN.fullmatch(normalized_stock_no):
+        raise InvalidStockCodeError("股票代號格式錯誤，請輸入 4 到 6 碼數字。")
+
+    month_start = date.today().replace(day=1)
+    for _ in range(months_to_check):
+        payload = _fetch_month_payload(normalized_stock_no, month_start)
+        if payload is not None:
+            latest_close_price = _extract_latest_close_price(payload.get("data", []))
+            if latest_close_price is not None:
+                return latest_close_price
+        month_start = _get_previous_month_start(month_start)
+    return None
+
+
 def fetch_stock_detail(stock_no: str, start_date_text: str | None, end_date_text: str | None) -> StockLookupResult:
     normalized_stock_no = stock_no.strip()
     if not STOCK_NO_PATTERN.fullmatch(normalized_stock_no):
@@ -237,6 +253,20 @@ def _parse_rows(raw_rows: list[list[str]], start_date: date, end_date: date) -> 
     return rows
 
 
+def _extract_latest_close_price(raw_rows: list[list[str]]) -> str | None:
+    latest_trade: tuple[str, str] | None = None
+    for row in raw_rows:
+        if len(row) < 7:
+            continue
+        close_price = _normalize_price(row[6])
+        if close_price == "-":
+            continue
+        trade_date = _convert_roc_date(row[0])
+        if latest_trade is None or trade_date > latest_trade[0]:
+            latest_trade = (trade_date, close_price)
+    return latest_trade[1] if latest_trade is not None else None
+
+
 def _apply_moving_averages(rows: list[StockPriceRow]) -> None:
     close_prices = [float(row.close_price) for row in rows]
     for index, row in enumerate(rows):
@@ -325,3 +355,9 @@ def _iterate_month_starts(start_date: date, end_date: date) -> list[date]:
         else:
             current = date(current.year, current.month + 1, 1)
     return months
+
+
+def _get_previous_month_start(current: date) -> date:
+    if current.month == 1:
+        return date(current.year - 1, 12, 1)
+    return date(current.year, current.month - 1, 1)

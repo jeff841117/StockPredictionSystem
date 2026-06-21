@@ -4,7 +4,8 @@ from decimal import Decimal, InvalidOperation
 
 from app.config import get_settings
 from app.database import get_connection, init_database
-from app.models.trade import PositionSummary, RealizedPnlSummary, TradeRecord, VirtualCashSummary
+from app.models.trade import PositionSummary, RealizedPnlSummary, TradeRecord, UnrealizedPnlSummary, VirtualCashSummary
+from app.services.stock_service import StockServiceError, get_latest_close_price
 
 
 settings = get_settings()
@@ -54,6 +55,79 @@ def list_trades(db_path: str | None = None) -> list[TradeRecord]:
 
 def list_positions(db_path: str | None = None) -> list[PositionSummary]:
     raw_positions, _, _ = _build_trade_ledger(db_path)
+    return _build_position_summaries(raw_positions)
+
+
+def get_portfolio_overview(db_path: str | None = None) -> tuple[list[PositionSummary], UnrealizedPnlSummary]:
+    raw_positions, _, _ = _build_trade_ledger(db_path)
+    base_positions = _build_position_summaries(raw_positions)
+    positions: list[PositionSummary] = []
+    total_unrealized_pnl = Decimal("0")
+    priced_position_count = 0
+    missing_price_count = 0
+
+    for position in base_positions:
+        try:
+            latest_close_price = get_latest_close_price(position.stock_no)
+        except StockServiceError:
+            latest_close_price = None
+
+        if latest_close_price is None:
+            missing_price_count += 1
+            positions.append(
+                PositionSummary(
+                    stock_no=position.stock_no,
+                    stock_name=position.stock_name,
+                    quantity=position.quantity,
+                    average_cost=position.average_cost,
+                    total_buy_amount=position.total_buy_amount,
+                    price_note="最近收盤價暫時無法取得，未納入未實現損益計算。",
+                )
+            )
+            continue
+
+        try:
+            current_price = Decimal(latest_close_price)
+        except InvalidOperation:
+            missing_price_count += 1
+            positions.append(
+                PositionSummary(
+                    stock_no=position.stock_no,
+                    stock_name=position.stock_name,
+                    quantity=position.quantity,
+                    average_cost=position.average_cost,
+                    total_buy_amount=position.total_buy_amount,
+                    price_note="最近收盤價格式異常，未納入未實現損益計算。",
+                )
+            )
+            continue
+
+        cost_basis = Decimal(position.total_buy_amount.replace(",", ""))
+        market_value = current_price * position.quantity
+        unrealized_pnl = market_value - cost_basis
+        total_unrealized_pnl += unrealized_pnl
+        priced_position_count += 1
+        positions.append(
+            PositionSummary(
+                stock_no=position.stock_no,
+                stock_name=position.stock_name,
+                quantity=position.quantity,
+                average_cost=position.average_cost,
+                total_buy_amount=position.total_buy_amount,
+                current_price=_format_money(current_price),
+                market_value=_format_money(market_value),
+                unrealized_pnl=_format_money(unrealized_pnl),
+            )
+        )
+
+    return positions, UnrealizedPnlSummary(
+        total_unrealized_pnl=_format_money(total_unrealized_pnl),
+        priced_position_count=priced_position_count,
+        missing_price_count=missing_price_count,
+    )
+
+
+def _build_position_summaries(raw_positions: dict[str, dict[str, Decimal | int | str]]) -> list[PositionSummary]:
     positions: list[PositionSummary] = []
     for stock_no in sorted(raw_positions.keys()):
         state = raw_positions[stock_no]
