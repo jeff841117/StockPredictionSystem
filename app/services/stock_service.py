@@ -142,12 +142,12 @@ def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None
     )
 
 
-def get_latest_close_price(stock_no: str, months_to_check: int = 3) -> str | None:
+def get_latest_close_price(stock_no: str, months_to_check: int = 3, reference_date: date | None = None) -> str | None:
     normalized_stock_no = stock_no.strip()
     if not STOCK_NO_PATTERN.fullmatch(normalized_stock_no):
         raise InvalidStockCodeError("股票代號格式錯誤，請輸入 4 到 6 碼數字。")
 
-    month_start = date.today().replace(day=1)
+    month_start = (reference_date or date.today()).replace(day=1)
     for _ in range(months_to_check):
         payload = _fetch_month_payload(normalized_stock_no, month_start)
         if payload is not None:

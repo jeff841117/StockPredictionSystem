@@ -188,6 +188,31 @@ python -m unittest discover -s tests -v
 - 交易紀錄排序
 - 持股總覽、已實現損益、未實現損益與投資組合摘要
 
+### 真實價格路徑 smoke test
+
+此測試會實際打到 TWSE 真實資料來源，用來補強 `get_latest_close_price()` 與最近價格回補路徑驗證。  
+預設不會在一般單元測試中強制執行，避免外部資料波動讓主測試流程變得不穩定。
+
+執行方式：
+
+```bash
+set RUN_TWSE_SMOKE=1
+python -m unittest discover -s tests -p "test_stock_price_smoke.py" -v
+```
+
+用途：
+
+- 驗證常見有效股票代號可取得最近收盤價
+- 驗證需要時可向前回補查找
+- 區分外部資料異常與程式邏輯異常
+
+結果判讀：
+
+- `ok`：真實價格路徑正常
+- `EXTERNAL_DATA_ERROR`：TWSE 連線、限流或回傳異常
+- `EXTERNAL_DATA_STATE`：當下外部資料暫時不可得
+- `LOGIC_ERROR`：程式執行或回補邏輯異常
+
 ## 專案結構
 
 ```text
