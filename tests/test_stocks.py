@@ -9,6 +9,7 @@ from app.services.stock_service import (
     ExternalServiceError,
     InvalidDateRangeError,
     StockNotFoundError,
+    build_research_summary,
     build_close_price_chart,
     fetch_stock_detail,
 )
@@ -18,8 +19,10 @@ class StockSearchTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
 
+    @patch("app.routers.stocks.get_position_for_stock")
     @patch("app.routers.stocks.fetch_stock_detail")
-    def test_search_stock_success(self, mock_fetch) -> None:
+    def test_search_stock_success(self, mock_fetch, mock_position) -> None:
+        mock_position.return_value = None
         mock_fetch.return_value = StockLookupResult(
             stock_no="2330",
             stock_name="台積電",
@@ -62,9 +65,14 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("MA20", response.text)
         self.assertIn("aria-label=\"收盤價走勢圖\"", response.text)
         self.assertIn("850.00", response.text)
+        self.assertIn("Research Summary", response.text)
+        self.assertIn("區間最高 / 最低", response.text)
+        self.assertIn("目前未持有", response.text)
 
+    @patch("app.routers.stocks.get_position_for_stock")
     @patch("app.routers.stocks.fetch_stock_detail")
-    def test_search_stock_success_with_insufficient_rows_shows_chart_fallback(self, mock_fetch) -> None:
+    def test_search_stock_success_with_insufficient_rows_shows_chart_fallback(self, mock_fetch, mock_position) -> None:
+        mock_position.return_value = None
         mock_fetch.return_value = StockLookupResult(
             stock_no="2330",
             stock_name="台積電",
@@ -90,6 +98,50 @@ class StockSearchTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("資料筆數不足，暫時無法繪製收盤價走勢圖", response.text)
+
+    @patch("app.routers.stocks.get_position_for_stock")
+    @patch("app.routers.stocks.fetch_stock_detail")
+    def test_search_stock_research_summary_shows_holding_status(self, mock_fetch, mock_position) -> None:
+        mock_position.return_value = Mock(quantity=1000, average_cost="800.00")
+        mock_fetch.return_value = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                    ma5="850.00",
+                    ma20="833.85",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-01",
+                    open_price="790.00",
+                    high_price="812.00",
+                    low_price="780.00",
+                    close_price="800.00",
+                    volume="42,535,118",
+                    ma5="-",
+                    ma20="-",
+                ),
+            ],
+        )
+
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("目前持有 1000 股", response.text)
+        self.assertIn("平均成本 800.00", response.text)
+        self.assertIn("目前價格高於平均成本", response.text)
 
     @patch("app.routers.stocks.fetch_stock_detail")
     def test_search_stock_not_found_message(self, mock_fetch) -> None:
@@ -249,6 +301,51 @@ class StockSearchTests(unittest.TestCase):
         self.assertTrue(bool(chart.close_price_svg_path))
         self.assertTrue(bool(chart.ma5_svg_path))
         self.assertEqual(chart.ma20_svg_path, "")
+
+    def test_build_research_summary_matches_result_data(self) -> None:
+        result = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                    ma5="850.00",
+                    ma20="833.85",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-01",
+                    open_price="790.00",
+                    high_price="812.00",
+                    low_price="780.00",
+                    close_price="800.00",
+                    volume="42,535,118",
+                    ma5="-",
+                    ma20="-",
+                ),
+            ],
+        )
+
+        summary = build_research_summary(result, holding_quantity=1000, holding_average_cost="800.00")
+
+        self.assertEqual(summary.latest_close, "821.00")
+        self.assertEqual(summary.interval_change, "+21.00")
+        self.assertEqual(summary.interval_change_percent, "+2.62%")
+        self.assertEqual(summary.period_high, "846.00")
+        self.assertEqual(summary.period_low, "780.00")
+        self.assertEqual(summary.latest_ma5, "850.00")
+        self.assertEqual(summary.latest_ma20, "833.85")
+        self.assertTrue(summary.holding.is_holding)
+        self.assertEqual(summary.holding.quantity, 1000)
+        self.assertEqual(summary.holding.average_cost, "800.00")
+        self.assertEqual(summary.holding.price_vs_average_cost, "目前價格高於平均成本")
 
     def test_search_stock_invalid_code(self) -> None:
         response = self.client.get(

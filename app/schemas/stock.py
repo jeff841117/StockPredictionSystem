@@ -36,3 +36,25 @@ class StockLookupResult(BaseModel):
     interval_start: str
     interval_end: str
     rows: list[StockPriceRow]
+
+
+class ResearchHoldingSummary(BaseModel):
+    is_holding: bool
+    quantity: int
+    average_cost: str
+    price_vs_average_cost: str = "-"
+
+
+class ResearchSummary(BaseModel):
+    stock_no: str
+    stock_name: str
+    interval_start: str
+    interval_end: str
+    latest_close: str
+    interval_change: str
+    interval_change_percent: str
+    period_high: str
+    period_low: str
+    latest_ma5: str
+    latest_ma20: str
+    holding: ResearchHoldingSummary

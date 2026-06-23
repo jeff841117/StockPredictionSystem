@@ -9,14 +9,22 @@
 <body>
     <header class="site-header">
         <div class="container">
-            <p class="eyebrow">StockPredictionSystem</p>
-            <h1>{{ project_name }}</h1>
-            <p class="subtitle">台股單一股票最小查詢流程</p>
+            <div class="site-header-top">
+                <div>
+                    <p class="eyebrow">StockPredictionSystem</p>
+                    <h1>{{ project_name }}</h1>
+                    <p class="subtitle">台股研究、模擬交易與投資組合工作台</p>
+                </div>
+                <div class="status-stack">
+                    <span class="status-pill live">MVP v1</span>
+                    <span class="status-pill soft">TWSE / 本機 SQLite</span>
+                </div>
+            </div>
             <nav class="site-nav">
-                <a href="{{ url_for('index') }}">股票查詢</a>
-                <a href="{{ url_for('watchlist_page') }}">收藏清單</a>
-                <a href="{{ url_for('trades_page') }}">交易紀錄</a>
-                <a href="{{ url_for('portfolio_page') }}">持股總覽</a>
+                <a class="{% if request.url.path == '/' or request.url.path.startswith('/stocks') %}active{% endif %}" href="{{ url_for('index') }}">股票查詢</a>
+                <a class="{% if request.url.path.startswith('/watchlist') %}active{% endif %}" href="{{ url_for('watchlist_page') }}">收藏清單</a>
+                <a class="{% if request.url.path == '/trades' %}active{% endif %}" href="{{ url_for('trades_page') }}">交易紀錄</a>
+                <a class="{% if request.url.path.startswith('/trades/portfolio') %}active{% endif %}" href="{{ url_for('portfolio_page') }}">持股總覽</a>
             </nav>
         </div>
     </header>

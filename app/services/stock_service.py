@@ -6,7 +6,14 @@ from decimal import Decimal, InvalidOperation
 import requests
 
 from app.config import get_settings
-from app.schemas.stock import ClosePriceChart, ClosePriceChartPoint, StockLookupResult, StockPriceRow
+from app.schemas.stock import (
+    ClosePriceChart,
+    ClosePriceChartPoint,
+    ResearchHoldingSummary,
+    ResearchSummary,
+    StockLookupResult,
+    StockPriceRow,
+)
 
 
 settings = get_settings()
@@ -139,6 +146,57 @@ def build_close_price_chart(result: StockLookupResult) -> ClosePriceChart | None
         max_price_label=f"{max_price:.2f}",
         start_date=points[0].trade_date,
         end_date=points[-1].trade_date,
+    )
+
+
+def build_research_summary(
+    result: StockLookupResult,
+    holding_quantity: int = 0,
+    holding_average_cost: str = "-",
+) -> ResearchSummary:
+    latest_row = result.rows[0]
+    oldest_row = result.rows[-1]
+
+    latest_close_value = _to_decimal_or_none(latest_row.close_price)
+    oldest_close_value = _to_decimal_or_none(oldest_row.close_price)
+    high_values = [value for value in (_to_decimal_or_none(row.high_price) for row in result.rows) if value is not None]
+    low_values = [value for value in (_to_decimal_or_none(row.low_price) for row in result.rows) if value is not None]
+    average_cost_value = _to_decimal_or_none(holding_average_cost)
+
+    interval_change = Decimal("0")
+    interval_change_percent = Decimal("0")
+    if latest_close_value is not None and oldest_close_value is not None:
+        interval_change = latest_close_value - oldest_close_value
+        if oldest_close_value != 0:
+            interval_change_percent = (interval_change / oldest_close_value) * Decimal("100")
+
+    price_vs_average_cost = "-"
+    if holding_quantity > 0 and latest_close_value is not None and average_cost_value is not None:
+        if latest_close_value > average_cost_value:
+            price_vs_average_cost = "目前價格高於平均成本"
+        elif latest_close_value < average_cost_value:
+            price_vs_average_cost = "目前價格低於平均成本"
+        else:
+            price_vs_average_cost = "目前價格等於平均成本"
+
+    return ResearchSummary(
+        stock_no=result.stock_no,
+        stock_name=result.stock_name,
+        interval_start=result.interval_start,
+        interval_end=result.interval_end,
+        latest_close=_format_decimal_or_fallback(latest_close_value, latest_row.close_price),
+        interval_change=_format_signed_decimal(interval_change),
+        interval_change_percent=_format_signed_percent(interval_change_percent),
+        period_high=_format_decimal_or_fallback(max(high_values) if high_values else None, "-"),
+        period_low=_format_decimal_or_fallback(min(low_values) if low_values else None, "-"),
+        latest_ma5=latest_row.ma5,
+        latest_ma20=latest_row.ma20,
+        holding=ResearchHoldingSummary(
+            is_holding=holding_quantity > 0,
+            quantity=holding_quantity,
+            average_cost=holding_average_cost if holding_quantity > 0 else "-",
+            price_vs_average_cost=price_vs_average_cost,
+        ),
     )
 
 
@@ -325,6 +383,32 @@ def _normalize_int(raw_value: str) -> str:
     if cleaned in {"--", ""}:
         return "-"
     return f"{int(cleaned):,}"
+
+
+def _to_decimal_or_none(raw_value: str) -> Decimal | None:
+    cleaned = raw_value.replace(",", "").strip()
+    if cleaned in {"", "-"}:
+        return None
+    try:
+        return Decimal(cleaned)
+    except InvalidOperation:
+        return None
+
+
+def _format_decimal_or_fallback(value: Decimal | None, fallback: str) -> str:
+    if value is None:
+        return fallback
+    return f"{value:,.2f}"
+
+
+def _format_signed_decimal(value: Decimal) -> str:
+    sign = "+" if value >= 0 else ""
+    return f"{sign}{value:,.2f}"
+
+
+def _format_signed_percent(value: Decimal) -> str:
+    sign = "+" if value >= 0 else ""
+    return f"{sign}{value:.2f}%"
 
 
 def _extract_stock_name(title: str, stock_no: str) -> str:

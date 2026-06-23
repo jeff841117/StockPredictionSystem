@@ -3,13 +3,61 @@
 {% block title %}首頁 | {{ project_name }}{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <h2>股票資料查詢</h2>
-    <p>{{ message }}</p>
-    <p>預設查詢區間：{{ fixed_interval }}</p>
+<section class="hero hero-screener">
+    <div class="hero-copy">
+        <p class="section-kicker">Stock Screener Workspace</p>
+        <h2>把首頁改成像真正研究工具，而不只是查詢表單。</h2>
+        <p>{{ message }}</p>
+        <p>預設查詢區間：{{ fixed_interval }}</p>
+    </div>
+    <div class="hero-aside">
+        <div class="mini-stat">
+            <span class="label">目前資料來源</span>
+            <strong>TWSE STOCK_DAY</strong>
+        </div>
+        <div class="mini-stat">
+            <span class="label">目前 MVP 聚焦</span>
+            <strong>單一股票研究 + 模擬交易</strong>
+        </div>
+        <div class="mini-stat">
+            <span class="label">下一步可擴充</span>
+            <strong>選股器、多股票比較、登入權限</strong>
+        </div>
+    </div>
 </section>
 
 <section class="result-panel">
+    <div class="section-heading">
+        <div>
+            <p class="section-kicker">Reference Layout</p>
+            <h3>依照你提供的同類系統，首頁先補齊篩選器工作台感。</h3>
+        </div>
+    </div>
+    <div class="chip-toolbar">
+        <button class="chip-chip active">TW 市場</button>
+        <button class="chip-chip">觀察清單</button>
+        <button class="chip-chip">指數</button>
+        <button class="chip-chip">價格</button>
+        <button class="chip-chip">漲跌 %</button>
+        <button class="chip-chip">總市值</button>
+        <button class="chip-chip">P/E</button>
+        <button class="chip-chip">EPS 成長</button>
+        <button class="chip-chip">股息殖利率</button>
+        <button class="chip-chip">ROE</button>
+        <button class="chip-chip">Beta</button>
+    </div>
+    <p class="help-text">
+        這一排目前先作為前端布局與功能說明用。真正已經能操作的核心能力，仍是下方的股票代號與日期區間查詢。
+    </p>
+</section>
+
+<section class="result-panel">
+    <div class="section-heading">
+        <div>
+            <p class="section-kicker">Core Search</p>
+            <h3>目前可執行的查詢流程</h3>
+        </div>
+    </div>
     <form class="search-form" action="{{ url_for('search_stock') }}" method="get">
         <label for="stock_no">台股代號</label>
         <div class="search-row">
@@ -55,5 +103,55 @@
         {{ error_message }}
     </div>
     {% endif %}
+</section>
+
+<section class="insight-grid">
+    <article class="result-panel">
+        <div class="section-heading">
+            <div>
+                <p class="section-kicker">MVP 已有</p>
+                <h3>這些功能已經真的能用</h3>
+            </div>
+        </div>
+        <ul class="feature-list">
+            <li>單一股票 + 自訂日期區間查詢</li>
+            <li>價格表格、收盤價走勢圖、MA5 / MA20</li>
+            <li>收藏清單</li>
+            <li>模擬 BUY / SELL</li>
+            <li>交易紀錄、持股總覽、已實現 / 未實現損益、投資組合摘要</li>
+        </ul>
+    </article>
+
+    <article class="result-panel">
+        <div class="section-heading">
+            <div>
+                <p class="section-kicker">作品集適合補</p>
+                <h3>面試展示會加分的部分</h3>
+            </div>
+        </div>
+        <ul class="feature-list">
+            <li>帳號登入與權限管理</li>
+            <li>Swagger / OpenAPI 展示</li>
+            <li>PostgreSQL + migration</li>
+            <li>Docker / CI / deployment 文件</li>
+            <li>更完整的錯誤追蹤與 audit log</li>
+        </ul>
+    </article>
+
+    <article class="result-panel">
+        <div class="section-heading">
+            <div>
+                <p class="section-kicker">日常使用適合補</p>
+                <h3>真正要拿來長期用的部分</h3>
+            </div>
+        </div>
+        <ul class="feature-list">
+            <li>多股票比較與自選池</li>
+            <li>手續費、交易稅、真實交易規則</li>
+            <li>價格更新排程與通知提醒</li>
+            <li>資料備援、風控與真實券商串接前檢查</li>
+            <li>PostgreSQL 與長期資料保存策略</li>
+        </ul>
+    </article>
 </section>
 {% endblock %}

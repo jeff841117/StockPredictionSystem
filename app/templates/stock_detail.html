@@ -3,170 +3,298 @@
 {% block title %}股票查詢結果 | {{ project_name }}{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <h2>股票查詢結果</h2>
-    <p>{{ result.stock_name }}（{{ result.stock_no }}）的歷史成交資料。</p>
-    <p>資料來源：{{ result.source_name }}</p>
-</section>
-
-<section class="result-panel">
-    <h3>收藏操作</h3>
-    <form action="{{ url_for('add_watchlist_item') }}" method="post">
-        <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
-        <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
-        <button type="submit">加入收藏清單</button>
-    </form>
-</section>
-
-<section class="result-panel">
-    <h3>模擬買進</h3>
-    <p>初始虛擬資金：{{ virtual_cash_summary.initial_cash }}</p>
-    <p>目前已使用：{{ virtual_cash_summary.used_cash }}</p>
-    <p>目前可用：{{ virtual_cash_summary.available_cash }}</p>
-
-    {% if trade_message %}
-    <div class="success-box">{{ trade_message }}</div>
-    {% endif %}
-    {% if trade_error_message %}
-    <div class="error-box">{{ trade_error_message }}</div>
-    {% endif %}
-
-    <form action="{{ url_for('buy_trade') }}" method="post">
-        <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
-        <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
-        <input type="hidden" name="start_date" value="{{ result.interval_start }}">
-        <input type="hidden" name="end_date" value="{{ result.interval_end }}">
-        <div class="search-row search-row-dates">
-            <div class="field-group">
-                <label for="buy_price">買進價格</label>
-                <input id="buy_price" name="buy_price" type="number" step="0.01" min="0.01" value="{{ result.rows[0].close_price }}" required>
+<section class="detail-hero">
+    <div class="detail-hero-main">
+        <p class="section-kicker">Research Workspace</p>
+        <h2>{{ result.stock_name }}</h2>
+        <div class="detail-meta">
+            <span class="ticker-pill">{{ result.stock_no }}</span>
+            <span class="exchange-pill">{{ result.source_name }}</span>
+            <span class="status-pill live">查詢區間 {{ result.interval_start }} 至 {{ result.interval_end }}</span>
+        </div>
+        <div class="price-strip">
+            <div class="price-block">
+                <span class="price-main">{{ quote_snapshot.latest_close }}</span>
+                <span class="currency-mark">TWD</span>
             </div>
-            <div class="field-group">
-                <label for="buy_quantity">買進股數</label>
-                <input id="buy_quantity" name="buy_quantity" type="number" min="1" step="1" value="1000" required>
-            </div>
-            <div class="field-group">
-                <label for="trade_time">買進時間</label>
-                <input id="trade_time" name="trade_time" type="datetime-local" value="{{ result.interval_end }}T09:00" required>
+            <div class="price-delta">
+                <strong>{{ quote_snapshot.change_value }}</strong>
+                <span>{{ quote_snapshot.change_percent }}</span>
             </div>
         </div>
-        <div class="table-actions">
-            <button type="submit">確認模擬買進</button>
-        </div>
-    </form>
-</section>
-
-<section class="result-panel">
-    <h3>收盤價走勢圖</h3>
-    {% if close_price_chart %}
-    <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>
-    <p>MA5、MA20 依本次查詢區間的收盤價資料計算。</p>
-    <div class="table-wrapper">
-        <svg
-            aria-label="收盤價走勢圖"
-            viewBox="0 0 640 240"
-            role="img"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <line x1="36" y1="24" x2="36" y2="216" stroke="#94a3b8" stroke-width="1" />
-            <line x1="36" y1="216" x2="604" y2="216" stroke="#94a3b8" stroke-width="1" />
-            <polyline
-                fill="none"
-                stroke="#0f766e"
-                stroke-width="3"
-                points="{{ close_price_chart.close_price_svg_path }}"
-            />
-            {% if close_price_chart.ma5_svg_path %}
-            <polyline
-                fill="none"
-                stroke="#ea580c"
-                stroke-width="2"
-                points="{{ close_price_chart.ma5_svg_path }}"
-            />
-            {% endif %}
-            {% if close_price_chart.ma20_svg_path %}
-            <polyline
-                fill="none"
-                stroke="#2563eb"
-                stroke-width="2"
-                points="{{ close_price_chart.ma20_svg_path }}"
-            />
-            {% endif %}
-            <text x="44" y="36" fill="#526072" font-size="12">最高 {{ close_price_chart.max_price_label }}</text>
-            <text x="44" y="210" fill="#526072" font-size="12">最低 {{ close_price_chart.min_price_label }}</text>
-            <text x="36" y="234" fill="#526072" font-size="12">{{ close_price_chart.start_date }}</text>
-            <text x="520" y="234" fill="#526072" font-size="12">{{ close_price_chart.end_date }}</text>
-        </svg>
+        <p class="help-text">最新列資料日期：{{ quote_snapshot.latest_date }}。目前仍使用歷史收盤價與最近可取得收盤價，不是即時行情。</p>
     </div>
-    <div class="chart-legend">
-        <span class="legend-item close">收盤價</span>
-        <span class="legend-item ma5">MA5</span>
-        <span class="legend-item ma20">MA20</span>
-    </div>
-    {% else %}
-    <div class="error-box">
-        資料筆數不足，暫時無法繪製收盤價走勢圖。
-    </div>
-    {% endif %}
-</section>
-
-<section class="result-panel">
-    <div class="stock-summary">
-        <div>
-            <span class="label">股票名稱</span>
-            <strong>{{ result.stock_name }}</strong>
-        </div>
-        <div>
-            <span class="label">股票代號</span>
-            <strong>{{ result.stock_no }}</strong>
-        </div>
-        <div>
-            <span class="label">查詢區間</span>
-            <strong>{{ result.interval_start }} 至 {{ result.interval_end }}</strong>
-        </div>
-        <div>
+    <aside class="detail-hero-side">
+        <div class="mini-stat">
             <span class="label">資料筆數</span>
             <strong>{{ result.rows|length }}</strong>
         </div>
+        <div class="mini-stat">
+            <span class="label">MA 指標</span>
+            <strong>MA5 / MA20</strong>
+        </div>
+        <div class="mini-stat">
+            <span class="label">目前可做</span>
+            <strong>收藏、BUY、研究圖表</strong>
+        </div>
+    </aside>
+</section>
+
+<section class="tab-strip result-panel">
+    <button class="tab-link active">概要</button>
+    <button class="tab-link">技術分析</button>
+    <button class="tab-link">交易</button>
+    <button class="tab-link">持股</button>
+    <button class="tab-link">文件</button>
+</section>
+
+<section class="result-panel research-summary-panel">
+    <div class="section-heading">
         <div>
-            <span class="label">顯示順序</span>
-            <strong>日期由新到舊</strong>
+            <p class="section-kicker">Research Summary</p>
+            <h3>先看最值得讀的研究摘要</h3>
         </div>
     </div>
+    <div class="research-summary-grid">
+        <div class="summary-card primary">
+            <span class="label">股票</span>
+            <strong>{{ research_summary.stock_name }} / {{ research_summary.stock_no }}</strong>
+            <p class="help-text">查詢區間 {{ research_summary.interval_start }} 至 {{ research_summary.interval_end }}</p>
+        </div>
+        <div class="summary-card">
+            <span class="label">最新收盤價</span>
+            <strong>{{ research_summary.latest_close }}</strong>
+        </div>
+        <div class="summary-card">
+            <span class="label">區間漲跌</span>
+            <strong>{{ research_summary.interval_change }}</strong>
+            <p class="help-text">{{ research_summary.interval_change_percent }}</p>
+        </div>
+        <div class="summary-card">
+            <span class="label">區間最高 / 最低</span>
+            <strong>{{ research_summary.period_high }} / {{ research_summary.period_low }}</strong>
+        </div>
+        <div class="summary-card">
+            <span class="label">最新 MA5 / MA20</span>
+            <strong>{{ research_summary.latest_ma5 }} / {{ research_summary.latest_ma20 }}</strong>
+        </div>
+        <div class="summary-card">
+            <span class="label">持股狀態</span>
+            {% if research_summary.holding.is_holding %}
+            <strong>目前持有 {{ research_summary.holding.quantity }} 股</strong>
+            <p class="help-text">平均成本 {{ research_summary.holding.average_cost }}</p>
+            <p class="help-text">{{ research_summary.holding.price_vs_average_cost }}</p>
+            {% else %}
+            <strong>目前未持有</strong>
+            <p class="help-text">可先用下方模擬買進建立第一筆研究倉位。</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
 
-    <div class="table-actions">
-        <a class="secondary-link" href="{{ url_for('index') }}">重新查詢</a>
+<section class="workspace-grid">
+    <div class="workspace-main">
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Price Action</p>
+                    <h3>價格與技術線圖</h3>
+                </div>
+            </div>
+            {% if close_price_chart %}
+            <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>
+            <p>MA5、MA20 依本次查詢區間的收盤價資料計算。</p>
+            <div class="table-wrapper">
+                <svg
+                    aria-label="收盤價走勢圖"
+                    viewBox="0 0 640 240"
+                    role="img"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <line x1="36" y1="24" x2="36" y2="216" stroke="#94a3b8" stroke-width="1" />
+                    <line x1="36" y1="216" x2="604" y2="216" stroke="#94a3b8" stroke-width="1" />
+                    <polyline
+                        fill="none"
+                        stroke="#0f766e"
+                        stroke-width="3"
+                        points="{{ close_price_chart.close_price_svg_path }}"
+                    />
+                    {% if close_price_chart.ma5_svg_path %}
+                    <polyline
+                        fill="none"
+                        stroke="#ea580c"
+                        stroke-width="2"
+                        points="{{ close_price_chart.ma5_svg_path }}"
+                    />
+                    {% endif %}
+                    {% if close_price_chart.ma20_svg_path %}
+                    <polyline
+                        fill="none"
+                        stroke="#2563eb"
+                        stroke-width="2"
+                        points="{{ close_price_chart.ma20_svg_path }}"
+                    />
+                    {% endif %}
+                    <text x="44" y="36" fill="#526072" font-size="12">最高 {{ close_price_chart.max_price_label }}</text>
+                    <text x="44" y="210" fill="#526072" font-size="12">最低 {{ close_price_chart.min_price_label }}</text>
+                    <text x="36" y="234" fill="#526072" font-size="12">{{ close_price_chart.start_date }}</text>
+                    <text x="520" y="234" fill="#526072" font-size="12">{{ close_price_chart.end_date }}</text>
+                </svg>
+            </div>
+            <div class="chart-legend">
+                <span class="legend-item close">收盤價</span>
+                <span class="legend-item ma5">MA5</span>
+                <span class="legend-item ma20">MA20</span>
+            </div>
+            {% else %}
+            <div class="error-box">
+                資料筆數不足，暫時無法繪製收盤價走勢圖。
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Data Table</p>
+                    <h3>歷史成交資料與技術指標</h3>
+                </div>
+                <a class="secondary-link" href="{{ url_for('index') }}">重新查詢</a>
+            </div>
+            <div class="stock-summary">
+                <div>
+                    <span class="label">股票名稱</span>
+                    <strong>{{ result.stock_name }}</strong>
+                </div>
+                <div>
+                    <span class="label">股票代號</span>
+                    <strong>{{ result.stock_no }}</strong>
+                </div>
+                <div>
+                    <span class="label">查詢區間</span>
+                    <strong>{{ result.interval_start }} 至 {{ result.interval_end }}</strong>
+                </div>
+                <div>
+                    <span class="label">資料筆數</span>
+                    <strong>{{ result.rows|length }}</strong>
+                </div>
+                <div>
+                    <span class="label">顯示順序</span>
+                    <strong>日期由新到舊</strong>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>成交日期</th>
+                            <th>收盤價</th>
+                            <th>MA5</th>
+                            <th>MA20</th>
+                            <th>開盤價</th>
+                            <th>最高價</th>
+                            <th>最低價</th>
+                            <th>成交量（股）</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in result.rows %}
+                        <tr>
+                            <td>{{ row.trade_date }}</td>
+                            <td>{{ row.close_price }}</td>
+                            <td>{{ row.ma5 }}</td>
+                            <td>{{ row.ma20 }}</td>
+                            <td>{{ row.open_price }}</td>
+                            <td>{{ row.high_price }}</td>
+                            <td>{{ row.low_price }}</td>
+                            <td>{{ row.volume }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>成交日期</th>
-                    <th>收盤價</th>
-                    <th>MA5</th>
-                    <th>MA20</th>
-                    <th>開盤價</th>
-                    <th>最高價</th>
-                    <th>最低價</th>
-                    <th>成交量（股）</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in result.rows %}
-                <tr>
-                    <td>{{ row.trade_date }}</td>
-                    <td>{{ row.close_price }}</td>
-                    <td>{{ row.ma5 }}</td>
-                    <td>{{ row.ma20 }}</td>
-                    <td>{{ row.open_price }}</td>
-                    <td>{{ row.high_price }}</td>
-                    <td>{{ row.low_price }}</td>
-                    <td>{{ row.volume }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <aside class="workspace-side">
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Quick Actions</p>
+                    <h3>收藏與交易入口</h3>
+                </div>
+            </div>
+            <form action="{{ url_for('add_watchlist_item') }}" method="post" class="stack-form">
+                <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
+                <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
+                <button type="submit">加入收藏清單</button>
+            </form>
+
+            <div class="sidebar-metrics">
+                <div>
+                    <span class="label">初始虛擬資金</span>
+                    <strong>{{ virtual_cash_summary.initial_cash }}</strong>
+                </div>
+                <div>
+                    <span class="label">目前已使用</span>
+                    <strong>{{ virtual_cash_summary.used_cash }}</strong>
+                </div>
+                <div>
+                    <span class="label">目前可用</span>
+                    <strong>{{ virtual_cash_summary.available_cash }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Paper Buy</p>
+                    <h3>模擬買進</h3>
+                </div>
+            </div>
+            {% if trade_message %}
+            <div class="success-box">{{ trade_message }}</div>
+            {% endif %}
+            {% if trade_error_message %}
+            <div class="error-box">{{ trade_error_message }}</div>
+            {% endif %}
+
+            <form action="{{ url_for('buy_trade') }}" method="post" class="stack-form">
+                <input type="hidden" name="stock_no" value="{{ result.stock_no }}">
+                <input type="hidden" name="stock_name" value="{{ result.stock_name }}">
+                <input type="hidden" name="start_date" value="{{ result.interval_start }}">
+                <input type="hidden" name="end_date" value="{{ result.interval_end }}">
+                <div class="field-group">
+                    <label for="buy_price">買進價格</label>
+                    <input id="buy_price" name="buy_price" type="number" step="0.01" min="0.01" value="{{ result.rows[0].close_price }}" required>
+                </div>
+                <div class="field-group">
+                    <label for="buy_quantity">買進股數</label>
+                    <input id="buy_quantity" name="buy_quantity" type="number" min="1" step="1" value="1000" required>
+                </div>
+                <div class="field-group">
+                    <label for="trade_time">買進時間</label>
+                    <input id="trade_time" name="trade_time" type="datetime-local" value="{{ result.interval_end }}T09:00" required>
+                </div>
+                <button type="submit">確認模擬買進</button>
+            </form>
+        </section>
+
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Gap Review</p>
+                    <h3>和同類系統的差距</h3>
+                </div>
+            </div>
+            <ul class="feature-list compact">
+                <li>目前沒有多條件篩選器與多股票榜單</li>
+                <li>目前沒有財報分頁、新聞、預測與社群模組</li>
+                <li>目前沒有即時行情、完整指數切換與 watchlist 儀表板</li>
+                <li>但已具備作品集最重要的資料流、狀態推導與交易閉環</li>
+            </ul>
+        </section>
+    </aside>
 </section>
 {% endblock %}

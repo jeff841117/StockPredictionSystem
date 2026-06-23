@@ -65,6 +65,14 @@ def list_positions(db_path: str | None = None) -> list[PositionSummary]:
     return _build_position_summaries(raw_positions)
 
 
+def get_position_for_stock(stock_no: str, db_path: str | None = None) -> PositionSummary | None:
+    normalized_stock_no = stock_no.strip()
+    for position in list_positions(db_path):
+        if position.stock_no == normalized_stock_no:
+            return position
+    return None
+
+
 def get_portfolio_overview(db_path: str | None = None) -> tuple[list[PositionSummary], UnrealizedPnlSummary]:
     raw_positions, _, _ = _build_trade_ledger(db_path)
     base_positions = _build_position_summaries(raw_positions)
