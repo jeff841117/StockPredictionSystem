@@ -122,3 +122,4 @@ python -m unittest discover -s tests -v
 2. 更多技術指標
 3. 使用者登入與資料隔離
 4. 投資組合進階分析
+5. 前端第二階段作品集版主線：參考 [docs/features/frontend-phase2-dual-track.md](features/frontend-phase2-dual-track.md)
