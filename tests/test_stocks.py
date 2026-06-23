@@ -4,14 +4,16 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas.stock import StockLookupResult, StockPriceRow
+from app.schemas.stock import HomeScreenerItem, StockLookupResult, StockPriceRow
 from app.services.stock_service import (
     ExternalServiceError,
     InvalidDateRangeError,
     StockNotFoundError,
-    build_research_summary,
     build_close_price_chart,
+    build_home_screener_item,
+    build_research_summary,
     fetch_stock_detail,
+    get_home_screener_items,
 )
 
 
@@ -385,6 +387,125 @@ class StockSearchTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 502)
         self.assertIn("股票資料來源暫時無法使用", response.text)
+
+    @patch("app.routers.pages.get_home_screener_items")
+    def test_homepage_screener_showcase_renders_candidates(self, mock_screener) -> None:
+        mock_screener.return_value = (
+            [
+                HomeScreenerItem(
+                    stock_no="2330",
+                    stock_name="台積電",
+                    interval_start="2024-05-01",
+                    interval_end="2024-05-31",
+                    latest_close="821.00",
+                    interval_change="+21.00",
+                    interval_change_percent="+2.62%",
+                    latest_ma5="850.00",
+                    latest_ma20="833.85",
+                    ma_status="MA5 高於 MA20",
+                )
+            ],
+            "",
+        )
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Research Candidates", response.text)
+        self.assertIn("台積電", response.text)
+        self.assertIn("821.00", response.text)
+        self.assertIn("MA5 高於 MA20", response.text)
+        self.assertIn("stock_no=2330&start_date=2024-05-01&end_date=2024-05-31", response.text)
+
+    @patch("app.routers.pages.get_home_screener_items")
+    def test_homepage_screener_showcase_renders_fallback_message(self, mock_screener) -> None:
+        mock_screener.return_value = ([], "首頁研究候選資料暫時無法整理，請稍後再試或先直接查詢個股。")
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("首頁研究候選資料暫時無法整理", response.text)
+        self.assertIn("目前還沒有可顯示的研究候選資料", response.text)
+
+    def test_build_home_screener_item_matches_result_data(self) -> None:
+        result = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                    ma5="850.00",
+                    ma20="833.85",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-01",
+                    open_price="790.00",
+                    high_price="812.00",
+                    low_price="780.00",
+                    close_price="800.00",
+                    volume="42,535,118",
+                    ma5="-",
+                    ma20="-",
+                ),
+            ],
+        )
+
+        item = build_home_screener_item(result)
+
+        self.assertEqual(item.latest_close, "821.00")
+        self.assertEqual(item.interval_change, "+21.00")
+        self.assertEqual(item.interval_change_percent, "+2.62%")
+        self.assertEqual(item.latest_ma5, "850.00")
+        self.assertEqual(item.latest_ma20, "833.85")
+        self.assertEqual(item.ma_status, "MA5 高於 MA20")
+
+    @patch("app.services.stock_service.fetch_stock_detail")
+    def test_get_home_screener_items_returns_partial_fallback_message(self, mock_fetch) -> None:
+        mock_fetch.side_effect = [
+            StockLookupResult(
+                stock_no="2330",
+                stock_name="台積電",
+                source_name="TWSE 每日成交資訊",
+                interval_start="2024-05-01",
+                interval_end="2024-05-31",
+                rows=[
+                    StockPriceRow(
+                        trade_date="2024-05-31",
+                        open_price="838.00",
+                        high_price="846.00",
+                        low_price="821.00",
+                        close_price="821.00",
+                        volume="90,177,283",
+                        ma5="850.00",
+                        ma20="833.85",
+                    ),
+                    StockPriceRow(
+                        trade_date="2024-05-01",
+                        open_price="790.00",
+                        high_price="812.00",
+                        low_price="780.00",
+                        close_price="800.00",
+                        volume="42,535,118",
+                        ma5="-",
+                        ma20="-",
+                    ),
+                ],
+            ),
+            ExternalServiceError("股票資料來源暫時無法使用，請稍後再試。"),
+        ]
+
+        items, message = get_home_screener_items(stock_nos=("2330", "2317"), start_date_text="2024-05-01", end_date_text="2024-05-31")
+
+        self.assertEqual(len(items), 1)
+        self.assertIn("部分研究候選資料暫時無法取得", message)
 
 
 if __name__ == "__main__":

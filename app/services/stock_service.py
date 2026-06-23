@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.schemas.stock import (
     ClosePriceChart,
     ClosePriceChartPoint,
+    HomeScreenerItem,
     ResearchHoldingSummary,
     ResearchSummary,
     StockLookupResult,
@@ -19,6 +20,7 @@ from app.schemas.stock import (
 settings = get_settings()
 STOCK_NO_PATTERN = re.compile(r"^\d{4,6}$")
 NOT_FOUND_MESSAGE = "查無資料，請確認股票代號是否存在，或該查詢區間內是否有成交資料。"
+HOME_SCREENER_STOCKS = ("2330", "2317", "2454", "2308")
 
 
 class StockServiceError(Exception):
@@ -198,6 +200,60 @@ def build_research_summary(
             price_vs_average_cost=price_vs_average_cost,
         ),
     )
+
+
+def build_home_screener_item(result: StockLookupResult) -> HomeScreenerItem:
+    latest_row = result.rows[0]
+    oldest_row = result.rows[-1]
+    latest_close_value = _to_decimal_or_none(latest_row.close_price)
+    oldest_close_value = _to_decimal_or_none(oldest_row.close_price)
+
+    interval_change = Decimal("0")
+    interval_change_percent = Decimal("0")
+    if latest_close_value is not None and oldest_close_value is not None:
+        interval_change = latest_close_value - oldest_close_value
+        if oldest_close_value != 0:
+            interval_change_percent = (interval_change / oldest_close_value) * Decimal("100")
+
+    return HomeScreenerItem(
+        stock_no=result.stock_no,
+        stock_name=result.stock_name,
+        interval_start=result.interval_start,
+        interval_end=result.interval_end,
+        latest_close=_format_decimal_or_fallback(latest_close_value, latest_row.close_price),
+        interval_change=_format_signed_decimal(interval_change),
+        interval_change_percent=_format_signed_percent(interval_change_percent),
+        latest_ma5=latest_row.ma5,
+        latest_ma20=latest_row.ma20,
+        ma_status=_build_ma_status(latest_row.ma5, latest_row.ma20),
+    )
+
+
+def get_home_screener_items(
+    stock_nos: tuple[str, ...] = HOME_SCREENER_STOCKS,
+    start_date_text: str | None = None,
+    end_date_text: str | None = None,
+) -> tuple[list[HomeScreenerItem], str]:
+    start_date = start_date_text
+    end_date = end_date_text
+    if not start_date or not end_date:
+        start_date, end_date = get_default_date_range()
+
+    items: list[HomeScreenerItem] = []
+    failure_count = 0
+    for stock_no in stock_nos:
+        try:
+            result = fetch_stock_detail(stock_no, start_date, end_date)
+        except StockServiceError:
+            failure_count += 1
+            continue
+        items.append(build_home_screener_item(result))
+
+    if items and failure_count == 0:
+        return items, ""
+    if items:
+        return items, "部分研究候選資料暫時無法取得，以下先顯示目前可用項目。"
+    return [], "首頁研究候選資料暫時無法整理，請稍後再試或先直接查詢個股。"
 
 
 def get_latest_close_price(stock_no: str, months_to_check: int = 3, reference_date: date | None = None) -> str | None:
@@ -409,6 +465,18 @@ def _format_signed_decimal(value: Decimal) -> str:
 def _format_signed_percent(value: Decimal) -> str:
     sign = "+" if value >= 0 else ""
     return f"{sign}{value:.2f}%"
+
+
+def _build_ma_status(ma5: str, ma20: str) -> str:
+    ma5_value = _to_decimal_or_none(ma5)
+    ma20_value = _to_decimal_or_none(ma20)
+    if ma5_value is None or ma20_value is None:
+        return "均線資料不足"
+    if ma5_value > ma20_value:
+        return "MA5 高於 MA20"
+    if ma5_value < ma20_value:
+        return "MA5 低於 MA20"
+    return "MA5 等於 MA20"
 
 
 def _extract_stock_name(title: str, stock_no: str) -> str:

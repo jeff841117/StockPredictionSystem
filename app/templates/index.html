@@ -105,6 +105,67 @@
     {% endif %}
 </section>
 
+<section class="result-panel screener-showcase-panel">
+    <div class="section-heading screener-showcase-heading">
+        <div>
+            <p class="section-kicker">Research Candidates</p>
+            <h3>Screener 展示區先用少量候選股，呈現研究平台而不是即時掃描器。</h3>
+        </div>
+        <p class="help-text">以下資料來自目前可用的 TWSE 歷史查詢能力，屬於研究候選展示，不代表即時行情。</p>
+    </div>
+
+    {% if screener_fallback_message %}
+    <div class="info-box">
+        {{ screener_fallback_message }}
+    </div>
+    {% endif %}
+
+    {% if screener_items %}
+    <div class="screener-showcase-table" aria-label="首頁 Screener 展示區">
+        <div class="screener-head">
+            <span>研究候選</span>
+            <span>最新收盤價</span>
+            <span>區間漲跌</span>
+            <span>均線狀態</span>
+            <span>研究入口</span>
+        </div>
+        <div class="screener-body">
+            {% for item in screener_items %}
+            <a
+                class="screener-row"
+                href="{{ url_for('search_stock') }}?stock_no={{ item.stock_no }}&start_date={{ item.interval_start }}&end_date={{ item.interval_end }}"
+            >
+                <div class="screener-company">
+                    <strong>{{ item.stock_name }}</strong>
+                    <span>{{ item.stock_no }}</span>
+                </div>
+                <div class="screener-metric">
+                    <strong>{{ item.latest_close }}</strong>
+                    <span>{{ item.interval_end }}</span>
+                </div>
+                <div class="screener-metric">
+                    <strong>{{ item.interval_change }}</strong>
+                    <span>{{ item.interval_change_percent }}</span>
+                </div>
+                <div class="screener-metric">
+                    <strong>{{ item.ma_status }}</strong>
+                    <span>MA5 {{ item.latest_ma5 }} / MA20 {{ item.latest_ma20 }}</span>
+                </div>
+                <div class="screener-link">
+                    <span>Open Research</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <strong>目前還沒有可顯示的研究候選資料。</strong>
+        <p>可先直接使用上方查詢流程進入個股研究頁。</p>
+    </div>
+    {% endif %}
+</section>
+
 <section class="insight-grid">
     <article class="result-panel">
         <div class="section-heading">

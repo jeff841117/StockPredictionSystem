@@ -58,3 +58,16 @@ class ResearchSummary(BaseModel):
     latest_ma5: str
     latest_ma20: str
     holding: ResearchHoldingSummary
+
+
+class HomeScreenerItem(BaseModel):
+    stock_no: str
+    stock_name: str
+    interval_start: str
+    interval_end: str
+    latest_close: str
+    interval_change: str
+    interval_change_percent: str
+    latest_ma5: str
+    latest_ma20: str
+    ma_status: str
