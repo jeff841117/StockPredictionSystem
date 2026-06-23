@@ -200,6 +200,19 @@ main.container {
     margin-bottom: 0;
 }
 
+.home-workspace-grid,
+.detail-workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.home-workspace-main,
+.home-workspace-side {
+    min-width: 0;
+}
+
 .hero-aside,
 .sidebar-metrics {
     display: grid;
@@ -317,6 +330,65 @@ button,
 .stack-form {
     display: grid;
     gap: 14px;
+}
+
+.search-stage-panel .chip-toolbar {
+    margin-bottom: 12px;
+}
+
+.workflow-panel,
+.workflow-strip {
+    position: relative;
+    overflow: hidden;
+}
+
+.workflow-panel::after,
+.workflow-strip::after {
+    content: "";
+    position: absolute;
+    inset: auto -8% -30% auto;
+    width: 220px;
+    height: 220px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(18, 120, 109, 0.08), transparent 68%);
+    pointer-events: none;
+}
+
+.workflow-steps {
+    display: grid;
+    gap: 16px;
+}
+
+.workflow-step {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.workflow-step strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 1rem;
+}
+
+.workflow-step p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.workflow-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    border-radius: 14px;
+    background: rgba(18, 120, 109, 0.1);
+    color: var(--accent);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
 }
 
 .error-box,
@@ -458,6 +530,12 @@ button,
     gap: 20px;
 }
 
+.home-positioning-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 20px;
+}
+
 .detail-hero {
     display: grid;
     grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.85fr);
@@ -523,35 +601,31 @@ button,
     padding-bottom: 12px;
 }
 
-.tab-link {
-    min-height: 40px;
-    padding: 0 14px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--muted);
-}
-
-.tab-link.active {
-    background: #ffffff;
-    border-color: var(--line);
-    color: var(--text);
-}
-
-.workspace-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.75fr) minmax(320px, 0.9fr);
-    gap: 20px;
-}
-
 .workspace-main,
 .workspace-side {
     min-width: 0;
 }
 
-.workspace-side .result-panel:first-child,
-.workspace-main .result-panel:first-child {
+.workflow-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.detail-workspace-grid {
     margin-top: 20px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+}
+
+.workspace-main > .result-panel:first-child,
+.workspace-side > .result-panel:first-child {
+    margin-top: 0;
+}
+
+.chart-stage-panel {
+    min-height: 100%;
 }
 
 .stock-summary {
@@ -568,7 +642,7 @@ button,
 }
 
 .research-summary-panel {
-    margin-top: 20px;
+    margin-top: 0;
 }
 
 .research-summary-grid {
@@ -604,6 +678,19 @@ button,
 
 .table-actions {
     margin-top: 16px;
+}
+
+.action-rail-panel {
+    position: sticky;
+    top: 130px;
+}
+
+.action-rail-panel + .action-rail-panel {
+    margin-top: 20px;
+}
+
+.data-table-panel {
+    margin-top: 20px;
 }
 
 .table-wrapper {
@@ -673,10 +760,13 @@ td .help-text {
 }
 
 @media (max-width: 1180px) {
+    .home-workspace-grid,
     .hero-screener,
     .detail-hero,
-    .workspace-grid,
-    .insight-grid {
+    .detail-workspace-grid,
+    .home-positioning-grid,
+    .insight-grid,
+    .workflow-strip {
         grid-template-columns: 1fr;
     }
 
@@ -709,6 +799,10 @@ td .help-text {
 
     .research-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .action-rail-panel {
+        position: static;
     }
 
     .status-stack {
@@ -752,6 +846,10 @@ td .help-text {
 
     .screener-showcase-heading .help-text {
         max-width: none;
+    }
+
+    .workflow-step {
+        grid-template-columns: 44px minmax(0, 1fr);
     }
 
     .research-summary-grid {

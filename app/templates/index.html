@@ -26,83 +26,135 @@
     </div>
 </section>
 
-<section class="result-panel">
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker">Reference Layout</p>
-            <h3>依照你提供的同類系統，首頁先補齊篩選器工作台感。</h3>
-        </div>
-    </div>
-    <div class="chip-toolbar">
-        <button class="chip-chip active">TW 市場</button>
-        <button class="chip-chip">觀察清單</button>
-        <button class="chip-chip">指數</button>
-        <button class="chip-chip">價格</button>
-        <button class="chip-chip">漲跌 %</button>
-        <button class="chip-chip">總市值</button>
-        <button class="chip-chip">P/E</button>
-        <button class="chip-chip">EPS 成長</button>
-        <button class="chip-chip">股息殖利率</button>
-        <button class="chip-chip">ROE</button>
-        <button class="chip-chip">Beta</button>
-    </div>
-    <p class="help-text">
-        這一排目前先作為前端布局與功能說明用。真正已經能操作的核心能力，仍是下方的股票代號與日期區間查詢。
-    </p>
-</section>
-
-<section class="result-panel">
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker">Core Search</p>
-            <h3>目前可執行的查詢流程</h3>
-        </div>
-    </div>
-    <form class="search-form" action="{{ url_for('search_stock') }}" method="get">
-        <label for="stock_no">台股代號</label>
-        <div class="search-row">
-            <input
-                id="stock_no"
-                name="stock_no"
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]{4,6}"
-                placeholder="例如 2330"
-                value="{{ stock_no or '' }}"
-                required
-            >
-            <button type="submit">查詢</button>
-        </div>
-        <div class="search-row search-row-dates">
-            <div class="field-group">
-                <label for="start_date">開始日期</label>
-                <input
-                    id="start_date"
-                    name="start_date"
-                    type="date"
-                    value="{{ start_date or '' }}"
-                    required
-                >
+<section class="home-workspace-grid">
+    <div class="home-workspace-main">
+        <section class="result-panel search-stage-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Core Search</p>
+                    <h3>從一檔股票開始建立研究路徑</h3>
+                </div>
             </div>
-            <div class="field-group">
-                <label for="end_date">結束日期</label>
-                <input
-                    id="end_date"
-                    name="end_date"
-                    type="date"
-                    value="{{ end_date or '' }}"
-                    required
-                >
+            <div class="chip-toolbar">
+                <button class="chip-chip active">TW 市場</button>
+                <button class="chip-chip">觀察清單</button>
+                <button class="chip-chip">指數</button>
+                <button class="chip-chip">價格</button>
+                <button class="chip-chip">漲跌 %</button>
+                <button class="chip-chip">總市值</button>
+                <button class="chip-chip">P/E</button>
+                <button class="chip-chip">EPS 成長</button>
+                <button class="chip-chip">股息殖利率</button>
+                <button class="chip-chip">ROE</button>
+                <button class="chip-chip">Beta</button>
             </div>
-        </div>
-        <p class="help-text">可自行調整查詢區間；歷史資料、走勢圖與 MA5 / MA20 都會依此同步更新。</p>
-    </form>
+            <p class="help-text">
+                上方篩選籤目前仍是展示型工作台語彙；真正可執行的核心能力，是下方的個股研究查詢。
+            </p>
+            <form class="search-form" action="{{ url_for('search_stock') }}" method="get">
+                <label for="stock_no">台股代號</label>
+                <div class="search-row">
+                    <input
+                        id="stock_no"
+                        name="stock_no"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]{4,6}"
+                        placeholder="例如 2330"
+                        value="{{ stock_no or '' }}"
+                        required
+                    >
+                    <button type="submit">查詢研究頁</button>
+                </div>
+                <div class="search-row search-row-dates">
+                    <div class="field-group">
+                        <label for="start_date">開始日期</label>
+                        <input
+                            id="start_date"
+                            name="start_date"
+                            type="date"
+                            value="{{ start_date or '' }}"
+                            required
+                        >
+                    </div>
+                    <div class="field-group">
+                        <label for="end_date">結束日期</label>
+                        <input
+                            id="end_date"
+                            name="end_date"
+                            type="date"
+                            value="{{ end_date or '' }}"
+                            required
+                        >
+                    </div>
+                </div>
+                <p class="help-text">可自行調整查詢區間；歷史資料、走勢圖與 MA5 / MA20 都會依此同步更新。</p>
+            </form>
 
-    {% if error_message %}
-    <div class="error-box">
-        {{ error_message }}
+            {% if error_message %}
+            <div class="error-box">
+                {{ error_message }}
+            </div>
+            {% endif %}
+        </section>
     </div>
-    {% endif %}
+
+    <aside class="home-workspace-side">
+        <section class="result-panel workflow-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Research Flow</p>
+                    <h3>首頁先告訴你該怎麼看</h3>
+                </div>
+            </div>
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <span class="workflow-index">01</span>
+                    <div>
+                        <strong>先定義標的與區間</strong>
+                        <p>從單一股票與明確時間範圍開始，快速進入研究頁。</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-index">02</span>
+                    <div>
+                        <strong>再看候選清單節奏</strong>
+                        <p>用首頁 Screener 展示區快速掃描幾檔代表性研究候選。</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <span class="workflow-index">03</span>
+                    <div>
+                        <strong>最後進研究與模擬操作</strong>
+                        <p>進入個股頁後看摘要、圖表、表格，再決定是否收藏或模擬交易。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="result-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker">Workspace Scope</p>
+                    <h3>目前首頁負責什麼</h3>
+                </div>
+            </div>
+            <div class="sidebar-metrics">
+                <div class="mini-stat">
+                    <span class="label">查詢主軸</span>
+                    <strong>單一股票研究</strong>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">展示定位</span>
+                    <strong>Research candidates</strong>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">後續延伸</span>
+                    <strong>完整 screener / 多股票比較</strong>
+                </div>
+            </div>
+        </section>
+    </aside>
 </section>
 
 <section class="result-panel screener-showcase-panel">
@@ -166,12 +218,12 @@
     {% endif %}
 </section>
 
-<section class="insight-grid">
+<section class="home-positioning-grid">
     <article class="result-panel">
         <div class="section-heading">
             <div>
-                <p class="section-kicker">MVP 已有</p>
-                <h3>這些功能已經真的能用</h3>
+                <p class="section-kicker">Product Scope</p>
+                <h3>這個首頁目前能帶你進入什麼流程</h3>
             </div>
         </div>
         <ul class="feature-list">
@@ -186,32 +238,15 @@
     <article class="result-panel">
         <div class="section-heading">
             <div>
-                <p class="section-kicker">作品集適合補</p>
-                <h3>面試展示會加分的部分</h3>
+                <p class="section-kicker">Portfolio Direction</p>
+                <h3>`main` 這條線接下來繼續補展示力</h3>
             </div>
         </div>
         <ul class="feature-list">
-            <li>帳號登入與權限管理</li>
-            <li>Swagger / OpenAPI 展示</li>
-            <li>PostgreSQL + migration</li>
-            <li>Docker / CI / deployment 文件</li>
-            <li>更完整的錯誤追蹤與 audit log</li>
-        </ul>
-    </article>
-
-    <article class="result-panel">
-        <div class="section-heading">
-            <div>
-                <p class="section-kicker">日常使用適合補</p>
-                <h3>真正要拿來長期用的部分</h3>
-            </div>
-        </div>
-        <ul class="feature-list">
-            <li>多股票比較與自選池</li>
-            <li>手續費、交易稅、真實交易規則</li>
-            <li>價格更新排程與通知提醒</li>
-            <li>資料備援、風控與真實券商串接前檢查</li>
-            <li>PostgreSQL 與長期資料保存策略</li>
+            <li>讓首頁像真正的研究工作台，而不是只剩查詢表單</li>
+            <li>讓個股頁能在一頁內完成摘要、判讀與操作交接</li>
+            <li>保留未來完整篩選器、排行榜與多股票研究的延伸空間</li>
+            <li>繼續維持作品集展示感，不提早變成高度個人化工具</li>
         </ul>
     </article>
 </section>
