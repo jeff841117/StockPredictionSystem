@@ -218,6 +218,43 @@
     {% endif %}
 </section>
 
+<section class="result-panel portfolio-preview-panel">
+    <div class="section-heading portfolio-preview-heading">
+        <div>
+            <p class="section-kicker">Portfolio Workspace</p>
+            <h3>這個系統不只查股，也能持續追蹤模擬投資組合。</h3>
+        </div>
+        <a class="secondary-link" href="{{ url_for('portfolio_page') }}">前往完整持股總覽</a>
+    </div>
+    <div class="portfolio-preview-grid">
+        <article class="portfolio-preview-card primary">
+            <span class="label">總資產估值</span>
+            <strong>{{ portfolio_summary.total_asset_estimate }}</strong>
+            <p class="help-text">以目前可用資金加上已知持股市值估算。</p>
+        </article>
+        <article class="portfolio-preview-card">
+            <span class="label">現金面</span>
+            <strong>可用 {{ portfolio_summary.available_cash }}</strong>
+            <p class="help-text">初始資金 {{ portfolio_summary.initial_cash }} / 已使用 {{ portfolio_summary.used_cash }}</p>
+        </article>
+        <article class="portfolio-preview-card">
+            <span class="label">部位面</span>
+            <strong>持股市值 {{ portfolio_summary.holdings_market_value }}</strong>
+            <p class="help-text">模擬交易建立的部位會集中整理到 portfolio workspace。</p>
+        </article>
+        <article class="portfolio-preview-card">
+            <span class="label">損益面</span>
+            <strong>已實現 {{ portfolio_summary.total_realized_pnl }}</strong>
+            <p class="help-text">未實現 {{ portfolio_summary.total_unrealized_pnl }}</p>
+        </article>
+    </div>
+    {% if portfolio_summary.missing_price_count %}
+    <div class="info-box portfolio-fallback-note">
+        目前有 {{ portfolio_summary.missing_price_count }} 檔持股暫時缺少最近收盤價，因此首頁 preview 的市值與未實現損益只納入已知價格部分。
+    </div>
+    {% endif %}
+</section>
+
 <section class="home-positioning-grid">
     <article class="result-panel">
         <div class="section-heading">

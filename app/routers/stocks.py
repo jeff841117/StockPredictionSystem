@@ -17,7 +17,7 @@ from app.services.stock_service import (
     get_default_date_range,
     get_default_interval_label,
 )
-from app.services.trade_service import get_position_for_stock, get_virtual_cash_summary
+from app.services.trade_service import get_portfolio_summary, get_position_for_stock, get_virtual_cash_summary
 
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
@@ -68,6 +68,7 @@ def _render_error(
             "project_name": settings.app_name,
             "message": "輸入台股代號與日期區間後，即可查詢對應的歷史成交資料。",
             "fixed_interval": get_default_interval_label(),
+            "portfolio_summary": get_portfolio_summary(),
             "stock_no": stock_no,
             "start_date": start_date or default_start_date,
             "end_date": end_date or default_end_date,

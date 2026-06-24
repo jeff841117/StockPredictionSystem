@@ -524,6 +524,85 @@ button,
     color: var(--muted);
 }
 
+.portfolio-preview-heading {
+    align-items: end;
+}
+
+.portfolio-preview-grid,
+.portfolio-summary-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.portfolio-preview-grid {
+    grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr));
+}
+
+.portfolio-summary-grid {
+    grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr));
+}
+
+.portfolio-preview-card,
+.portfolio-highlight-card,
+.portfolio-group-card {
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.portfolio-preview-card,
+.portfolio-highlight-card {
+    min-height: 170px;
+    padding: 20px;
+}
+
+.portfolio-group-card {
+    padding: 20px;
+}
+
+.portfolio-preview-card.primary,
+.portfolio-highlight-card {
+    background: linear-gradient(145deg, rgba(18, 120, 109, 0.14), rgba(255, 255, 255, 0.96));
+    border-color: rgba(18, 120, 109, 0.22);
+}
+
+.portfolio-preview-card strong,
+.portfolio-highlight-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.portfolio-preview-card .help-text,
+.portfolio-highlight-card .help-text {
+    margin: 10px 0 0;
+    font-size: 0.92rem;
+}
+
+.portfolio-group-card h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+}
+
+.portfolio-group-metrics {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.portfolio-group-metrics strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1.15rem;
+}
+
+.portfolio-fallback-note {
+    margin-top: 16px;
+}
+
 .insight-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -797,6 +876,8 @@ td .help-text {
     .detail-hero,
     .detail-workspace-grid,
     .home-positioning-grid,
+    .portfolio-preview-grid,
+    .portfolio-summary-grid,
     .insight-grid,
     .workflow-strip {
         grid-template-columns: 1fr;

@@ -246,6 +246,10 @@ class TradeTests(unittest.TestCase):
         self.assertIn("目前尚無持股資料", response.text)
         self.assertIn("初始虛擬資金", response.text)
         self.assertIn("1,000,000.00", response.text)
+        self.assertIn("Portfolio Summary", response.text)
+        self.assertIn("現金面", response.text)
+        self.assertIn("部位面", response.text)
+        self.assertIn("損益面", response.text)
 
     def test_portfolio_page_shows_positions(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
@@ -264,6 +268,18 @@ class TradeTests(unittest.TestCase):
         self.assertIn("5,000.00", response.text)
         self.assertIn("920,000.00", response.text)
         self.assertIn("1,005,000.00", response.text)
+        self.assertIn("總資產估值", response.text)
+        self.assertIn("可用資金 + 已知持股市值", response.text)
+
+    def test_portfolio_page_missing_price_shows_clear_fallback(self) -> None:
+        create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)
+
+        with patch("app.services.trade_service.get_latest_close_price", return_value=None):
+            response = self.client.get("/trades/portfolio")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("暫時無法取得最近收盤價", response.text)
+        self.assertIn("總資產估值與未實現損益僅納入已知市值部分", response.text)
 
     def test_portfolio_updates_after_sell(self) -> None:
         create_buy_trade("2330", "台積電", "800", "100", "2024-05-31T09:00", self.db_path)

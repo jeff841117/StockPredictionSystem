@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.models.trade import PortfolioSummary
 from app.schemas.stock import HomeScreenerItem, StockLookupResult, StockPriceRow
 from app.services.stock_service import (
     ExternalServiceError,
@@ -441,8 +442,19 @@ class StockSearchTests(unittest.TestCase):
         self.assertEqual(response.status_code, 502)
         self.assertIn("股票資料來源暫時無法使用", response.text)
 
+    @patch("app.routers.pages.get_portfolio_summary")
     @patch("app.routers.pages.get_home_screener_items")
-    def test_homepage_screener_showcase_renders_candidates(self, mock_screener) -> None:
+    def test_homepage_screener_showcase_renders_candidates(self, mock_screener, mock_portfolio_summary) -> None:
+        mock_portfolio_summary.return_value = PortfolioSummary(
+            initial_cash="1,000,000.00",
+            available_cash="920,000.00",
+            used_cash="80,000.00",
+            holdings_market_value="85,000.00",
+            total_realized_pnl="4,000.00",
+            total_unrealized_pnl="5,000.00",
+            total_asset_estimate="1,005,000.00",
+            missing_price_count=0,
+        )
         mock_screener.return_value = (
             [
                 HomeScreenerItem(
@@ -469,9 +481,23 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("821.00", response.text)
         self.assertIn("MA5 高於 MA20", response.text)
         self.assertIn("stock_no=2330&start_date=2024-05-01&end_date=2024-05-31", response.text)
+        self.assertIn("Portfolio Workspace", response.text)
+        self.assertIn("1,005,000.00", response.text)
+        self.assertIn("前往完整持股總覽", response.text)
 
+    @patch("app.routers.pages.get_portfolio_summary")
     @patch("app.routers.pages.get_home_screener_items")
-    def test_homepage_screener_showcase_renders_fallback_message(self, mock_screener) -> None:
+    def test_homepage_screener_showcase_renders_fallback_message(self, mock_screener, mock_portfolio_summary) -> None:
+        mock_portfolio_summary.return_value = PortfolioSummary(
+            initial_cash="1,000,000.00",
+            available_cash="920,000.00",
+            used_cash="80,000.00",
+            holdings_market_value="0.00",
+            total_realized_pnl="0.00",
+            total_unrealized_pnl="0.00",
+            total_asset_estimate="920,000.00",
+            missing_price_count=1,
+        )
         mock_screener.return_value = ([], "首頁研究候選資料暫時無法整理，請稍後再試或先直接查詢個股。")
 
         response = self.client.get("/")
@@ -479,6 +505,7 @@ class StockSearchTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("首頁研究候選資料暫時無法整理", response.text)
         self.assertIn("目前還沒有可顯示的研究候選資料", response.text)
+        self.assertIn("首頁 preview 的市值與未實現損益只納入已知價格部分", response.text)
 
     def test_build_home_screener_item_matches_result_data(self) -> None:
         result = StockLookupResult(

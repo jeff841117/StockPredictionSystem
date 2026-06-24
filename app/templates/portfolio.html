@@ -4,8 +4,9 @@
 
 {% block content %}
 <section class="hero">
+    <p class="section-kicker">Portfolio Workspace</p>
     <h2>持股總覽</h2>
-    <p>依目前持股顯示數量、平均成本、最近收盤價估算市值，並整理整體投資組合摘要。</p>
+    <p>依目前持股顯示數量、平均成本、最近收盤價估算市值，並把現金面、部位面與損益面整理成可展示的投資組合工作台。</p>
 </section>
 
 <section class="result-panel">
@@ -13,43 +14,74 @@
     <div class="error-box">{{ trade_error_message }}</div>
     {% endif %}
 
-    <div class="stock-summary">
+    <div class="section-heading">
         <div>
-            <span class="label">初始虛擬資金</span>
-            <strong>{{ portfolio_summary.initial_cash }}</strong>
-        </div>
-        <div>
-            <span class="label">目前可用資金</span>
-            <strong>{{ portfolio_summary.available_cash }}</strong>
-        </div>
-        <div>
-            <span class="label">目前已使用資金</span>
-            <strong>{{ portfolio_summary.used_cash }}</strong>
-        </div>
-        <div>
-            <span class="label">目前持股市值</span>
-            <strong>{{ portfolio_summary.holdings_market_value }}</strong>
-        </div>
-        <div>
-            <span class="label">累計已實現損益</span>
-            <strong>{{ portfolio_summary.total_realized_pnl }}</strong>
-        </div>
-        <div>
-            <span class="label">整體未實現損益</span>
-            <strong>{{ portfolio_summary.total_unrealized_pnl }}</strong>
-        </div>
-        <div>
-            <span class="label">目前總資產估值</span>
-            <strong>{{ portfolio_summary.total_asset_estimate }}</strong>
-        </div>
-        <div>
-            <span class="label">缺少價格檔數</span>
-            <strong>{{ portfolio_summary.missing_price_count }}</strong>
+            <p class="section-kicker">Portfolio Summary</p>
+            <h3>把現金、部位與損益關係整理成一眼可讀的展示區</h3>
         </div>
     </div>
 
+    <div class="portfolio-summary-grid">
+        <article class="portfolio-highlight-card">
+            <span class="label">總資產估值</span>
+            <strong>{{ portfolio_summary.total_asset_estimate }}</strong>
+            <p class="help-text">可用資金 + 已知持股市值</p>
+        </article>
+
+        <article class="portfolio-group-card">
+            <p class="section-kicker">Cash</p>
+            <h4>現金面</h4>
+            <div class="portfolio-group-metrics">
+                <div>
+                    <span class="label">初始虛擬資金</span>
+                    <strong>{{ portfolio_summary.initial_cash }}</strong>
+                </div>
+                <div>
+                    <span class="label">目前可用資金</span>
+                    <strong>{{ portfolio_summary.available_cash }}</strong>
+                </div>
+                <div>
+                    <span class="label">目前已使用資金</span>
+                    <strong>{{ portfolio_summary.used_cash }}</strong>
+                </div>
+            </div>
+        </article>
+
+        <article class="portfolio-group-card">
+            <p class="section-kicker">Holdings</p>
+            <h4>部位面</h4>
+            <div class="portfolio-group-metrics">
+                <div>
+                    <span class="label">目前持股市值</span>
+                    <strong>{{ portfolio_summary.holdings_market_value }}</strong>
+                </div>
+                <div>
+                    <span class="label">缺少價格檔數</span>
+                    <strong>{{ portfolio_summary.missing_price_count }}</strong>
+                </div>
+            </div>
+        </article>
+
+        <article class="portfolio-group-card">
+            <p class="section-kicker">PnL</p>
+            <h4>損益面</h4>
+            <div class="portfolio-group-metrics">
+                <div>
+                    <span class="label">累計已實現損益</span>
+                    <strong>{{ portfolio_summary.total_realized_pnl }}</strong>
+                </div>
+                <div>
+                    <span class="label">整體未實現損益</span>
+                    <strong>{{ portfolio_summary.total_unrealized_pnl }}</strong>
+                </div>
+            </div>
+        </article>
+    </div>
+
     {% if portfolio_summary.missing_price_count %}
-    <p class="help-text">有 {{ portfolio_summary.missing_price_count }} 檔持股暫時無法取得最近收盤價，目前總資產估值與未實現損益僅納入已知市值部分。</p>
+    <div class="info-box portfolio-fallback-note">
+        有 {{ portfolio_summary.missing_price_count }} 檔持股暫時無法取得最近收盤價，目前總資產估值與未實現損益僅納入已知市值部分。
+    </div>
     {% endif %}
 
     {% if positions %}
