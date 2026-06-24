@@ -194,6 +194,21 @@ uvicorn app.main:app --reload
 - 持股總覽頁會把摘要整理成「現金面 / 部位面 / 損益面」三組資訊
 - 缺價時仍保留明確提示，避免把資料缺失誤看成計算錯誤
 
+## 前端第二階段主線
+
+目前 `main` 已採用「作品集版第二階段主線」，前端已完成的展示型成果包含：
+
+- 個股頁 `Research Summary`
+- 首頁 `Screener / Research Candidates` 展示區
+- 首頁與個股頁的研究工作台版位優化
+- 個股頁圖表疊層切換
+- Demo 用投資組合摘要強化
+
+若要做前端第二階段總驗收，可直接參考：
+
+- [docs/features/frontend-phase2-acceptance-summary.md](docs/features/frontend-phase2-acceptance-summary.md)
+- [docs/features/frontend-phase2-dual-track.md](docs/features/frontend-phase2-dual-track.md)
+
 ## 測試方式
 
 執行最小自動化測試：

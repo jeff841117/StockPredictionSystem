@@ -123,3 +123,17 @@ python -m unittest discover -s tests -v
 3. 使用者登入與資料隔離
 4. 投資組合進階分析
 5. 前端第二階段作品集版主線：參考 [docs/features/frontend-phase2-dual-track.md](features/frontend-phase2-dual-track.md)
+
+## 前端第二階段目前狀態
+
+目前 `main` 上的前端第二階段作品集版主線，已完成以下展示型成果：
+
+1. 個股頁 `Research Summary`
+2. 首頁 `Research Candidates / Screener` 展示區
+3. 研究工作台版位優化
+4. 圖表疊層切換
+5. Demo 用投資組合摘要強化
+
+若要進行本輪前端總驗收，請直接參考：
+
+- [docs/features/frontend-phase2-acceptance-summary.md](features/frontend-phase2-acceptance-summary.md)
