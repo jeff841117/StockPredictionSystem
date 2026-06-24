@@ -14,7 +14,13 @@ templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent
 settings = get_settings()
 
 
-@router.get("/", response_class=HTMLResponse, tags=["pages"])
+@router.get(
+    "/",
+    response_class=HTMLResponse,
+    tags=["Pages"],
+    summary="首頁研究工作台",
+    description="回傳首頁 HTML，包含個股查詢入口、Research Candidates 展示與投資組合摘要 preview。",
+)
 def index(request: Request):
     start_date, end_date = get_default_date_range()
     screener_items, screener_fallback_message = get_home_screener_items(start_date_text=start_date, end_date_text=end_date)

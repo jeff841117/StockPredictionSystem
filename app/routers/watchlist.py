@@ -14,7 +14,7 @@ from app.services.watchlist_service import (
 )
 
 
-router = APIRouter(prefix="/watchlist", tags=["watchlist"])
+router = APIRouter(prefix="/watchlist")
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 settings = get_settings()
 
@@ -33,7 +33,13 @@ def _render_watchlist(request: Request, message: str = "", error_message: str = 
     )
 
 
-@router.get("", response_class=HTMLResponse)
+@router.get(
+    "",
+    response_class=HTMLResponse,
+    tags=["Watchlist Pages"],
+    summary="收藏清單頁",
+    description="回傳收藏清單 HTML，顯示目前已收藏股票與表單提示訊息。",
+)
 def watchlist_page(
     request: Request,
     message: str = Query(""),
@@ -41,7 +47,12 @@ def watchlist_page(
     return _render_watchlist(request, message=message)
 
 
-@router.post("/add")
+@router.post(
+    "/add",
+    tags=["Watchlist Pages"],
+    summary="加入收藏清單",
+    description="處理收藏表單提交，成功後導回收藏清單頁。此端點為瀏覽器表單動作，不是 JSON API。",
+)
 def add_watchlist_item(
     request: Request,
     stock_no: str | None = Form(None),
@@ -57,7 +68,12 @@ def add_watchlist_item(
     return RedirectResponse(url="/watchlist?message=已成功加入收藏清單。", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.post("/remove")
+@router.post(
+    "/remove",
+    tags=["Watchlist Pages"],
+    summary="移除收藏股票",
+    description="處理移除收藏表單提交，成功後導回收藏清單頁。此端點為瀏覽器表單動作，不是 JSON API。",
+)
 def remove_watchlist_item(
     request: Request,
     stock_no: str | None = Form(None),

@@ -27,7 +27,7 @@
 - 交易只支援最小 BUY / SELL 流程，不含手續費、交易稅、零股與當沖規則
 - 無使用者登入與多使用者隔離
 - 無資料庫進階遷移機制，使用本機 SQLite
-- 無完整 API 文件與正式部署流程
+- 無正式部署流程
 
 ## 執行環境
 
@@ -78,9 +78,34 @@ uvicorn app.main:app --reload
 
 - 首頁：`http://127.0.0.1:8000/`
 - 健康檢查：`http://127.0.0.1:8000/health`
+- Swagger UI：`http://127.0.0.1:8000/docs`
+- ReDoc：`http://127.0.0.1:8000/redoc`
+- OpenAPI JSON：`http://127.0.0.1:8000/openapi.json`
 - 交易紀錄：`http://127.0.0.1:8000/trades`
 - 持股總覽：`http://127.0.0.1:8000/trades/portfolio`
 - 收藏清單：`http://127.0.0.1:8000/watchlist`
+
+## API 文件入口
+
+目前專案已提供最小 Swagger / OpenAPI 展示層，方便展示平台能力與檢視資料端點。
+
+- Swagger UI：`/docs`
+- ReDoc：`/redoc`
+- OpenAPI JSON：`/openapi.json`
+
+目前端點分成兩類：
+
+- 頁面型路由：回傳 HTML，包含首頁、個股研究頁、收藏頁、交易紀錄頁與持股頁
+- 資料型 API：集中在 `/api/*`，回傳 JSON，方便用 Swagger / OpenAPI 檢視
+
+目前主要資料型 API 包含：
+
+- `/api/stocks/{stock_no}`：查詢單一股票歷史資料與 MA5 / MA20
+- `/api/watchlist/items`：讀取收藏清單
+- `/api/trades/history`：讀取模擬交易紀錄
+- `/api/trades/cash-summary`：讀取虛擬資金摘要
+- `/api/portfolio/positions`：讀取目前持股與未實現損益
+- `/api/portfolio/summary`：讀取投資組合摘要
 
 ## 操作流程
 

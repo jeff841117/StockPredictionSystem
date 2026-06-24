@@ -19,12 +19,18 @@ from app.services.trade_service import (
 )
 
 
-router = APIRouter(prefix="/trades", tags=["trades"])
+router = APIRouter(prefix="/trades")
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 settings = get_settings()
 
 
-@router.get("", response_class=HTMLResponse)
+@router.get(
+    "",
+    response_class=HTMLResponse,
+    tags=["Trade Pages"],
+    summary="交易紀錄頁",
+    description="回傳交易紀錄 HTML，顯示 BUY / SELL 紀錄、已實現損益與虛擬資金摘要。",
+)
 def trades_page(request: Request):
     return templates.TemplateResponse(
         request=request,
@@ -38,7 +44,13 @@ def trades_page(request: Request):
     )
 
 
-@router.get("/portfolio", response_class=HTMLResponse)
+@router.get(
+    "/portfolio",
+    response_class=HTMLResponse,
+    tags=["Trade Pages"],
+    summary="持股與投資組合頁",
+    description="回傳持股總覽 HTML，顯示持股、未實現損益與投資組合摘要。",
+)
 def portfolio_page(
     request: Request,
     trade_error_message: str = Query(""),
@@ -58,7 +70,12 @@ def portfolio_page(
     )
 
 
-@router.post("/buy")
+@router.post(
+    "/buy",
+    tags=["Trade Pages"],
+    summary="提交模擬買進表單",
+    description="處理股票結果頁的 BUY 表單，成功或失敗後會導回 HTML 頁面。此端點為瀏覽器表單動作，不是 JSON API。",
+)
 def buy_trade(
     stock_no: str | None = Form(None),
     stock_name: str | None = Form(None),
@@ -94,7 +111,12 @@ def buy_trade(
         )
 
 
-@router.post("/sell")
+@router.post(
+    "/sell",
+    tags=["Trade Pages"],
+    summary="提交模擬賣出表單",
+    description="處理持股頁的 SELL 表單，成功或失敗後會導回 HTML 頁面。此端點為瀏覽器表單動作，不是 JSON API。",
+)
 def sell_trade(
     stock_no: str | None = Form(None),
     stock_name: str | None = Form(None),

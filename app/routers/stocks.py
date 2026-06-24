@@ -20,7 +20,7 @@ from app.services.stock_service import (
 from app.services.trade_service import get_portfolio_summary, get_position_for_stock, get_virtual_cash_summary
 
 
-router = APIRouter(prefix="/stocks", tags=["stocks"])
+router = APIRouter(prefix="/stocks")
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 settings = get_settings()
 
@@ -78,7 +78,15 @@ def _render_error(
     )
 
 
-@router.get("/search", response_class=HTMLResponse)
+@router.get(
+    "/search",
+    response_class=HTMLResponse,
+    tags=["Stock Pages"],
+    summary="個股研究頁",
+    description=(
+        "回傳個股研究工作台 HTML，整合歷史價格表、收盤價走勢圖、MA5 / MA20 與 Research Summary。"
+    ),
+)
 def search_stock(
     request: Request,
     stock_no: str = Query(...),
