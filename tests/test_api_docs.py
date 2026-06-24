@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.api_errors import build_validation_issues
 from app.main import app
 
 
@@ -77,6 +78,27 @@ class ApiDocsTests(unittest.TestCase):
         self.assertEqual(payload["message"], "API 請求參數驗證失敗，請確認必填欄位與格式。")
         self.assertTrue(payload["validation_errors"])
         self.assertEqual(payload["validation_errors"][0]["field"], "end_date")
+        self.assertEqual(payload["validation_errors"][0]["message"], "缺少必要欄位。")
+
+    def test_validation_issue_messages_are_translated_to_traditional_chinese(self) -> None:
+        issues = build_validation_issues(
+            [
+                {"type": "missing", "loc": ("query", "end_date"), "msg": "Field required"},
+                {"type": "int_parsing", "loc": ("query", "limit"), "msg": "Input should be a valid integer"},
+                {
+                    "type": "date_parsing",
+                    "loc": ("query", "start_date"),
+                    "msg": "Input should be a valid date or datetime, input is too short",
+                },
+                {"type": "unknown_error", "loc": ("query", "keyword"), "msg": "Something unexpected"},
+            ]
+        )
+
+        self.assertEqual(issues[0].field, "end_date")
+        self.assertEqual(issues[0].message, "缺少必要欄位。")
+        self.assertEqual(issues[1].message, "limit 格式錯誤，請輸入整數。")
+        self.assertEqual(issues[2].message, "日期格式錯誤，請使用 YYYY-MM-DD。")
+        self.assertEqual(issues[3].message, "查詢參數格式錯誤。")
 
     @patch("app.routers.api.fetch_stock_detail")
     def test_api_error_schema_for_external_service_failure(self, mock_fetch) -> None:

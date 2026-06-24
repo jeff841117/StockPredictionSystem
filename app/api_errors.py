@@ -70,3 +70,41 @@ def build_common_api_error_responses(
         }
 
     return responses
+
+
+def build_validation_issues(validation_errors: list[dict]) -> list[ApiValidationIssue]:
+    issues: list[ApiValidationIssue] = []
+    for error in validation_errors:
+        location = ".".join(str(part) for part in error.get("loc", []) if part != "query")
+        issues.append(
+            ApiValidationIssue(
+                field=location or "request",
+                message=_translate_validation_message(error),
+            )
+        )
+    return issues
+
+
+def _translate_validation_message(error: dict) -> str:
+    error_type = error.get("type", "")
+    location = ".".join(str(part) for part in error.get("loc", []) if part != "query") or "欄位"
+
+    if error_type == "missing":
+        return "缺少必要欄位。"
+
+    if error_type in {"date_from_datetime_parsing", "date_parsing"}:
+        return "日期格式錯誤，請使用 YYYY-MM-DD。"
+
+    if error_type in {"int_parsing", "int_type"}:
+        return f"{location} 格式錯誤，請輸入整數。"
+
+    if error_type in {"float_parsing", "float_type", "decimal_parsing"}:
+        return f"{location} 格式錯誤，請輸入數值。"
+
+    if error_type in {"string_type", "string_unicode"}:
+        return f"{location} 格式錯誤，請輸入文字。"
+
+    if error_type == "bool_parsing":
+        return f"{location} 格式錯誤，請輸入布林值。"
+
+    return "查詢參數格式錯誤。"

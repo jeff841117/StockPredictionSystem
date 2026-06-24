@@ -86,6 +86,12 @@
 - `INTERNAL_SERVER_ERROR`
   - 伺服器內部錯誤
 
+補充：
+
+- `VALIDATION_ERROR` 內的 `validation_errors.message` 已統一轉為繁體中文
+- 目前優先涵蓋缺少必要欄位、日期格式錯誤、整數 / 數值 / 文字型別不符
+- 若遇到尚未特別 mapping 的驗證類型，會使用 `查詢參數格式錯誤。` 作為安全 fallback
+
 ## 5. 文件入口
 
 - Swagger UI：`/docs`

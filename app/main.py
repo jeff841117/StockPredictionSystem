@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 
-from app.api_errors import ApiError, build_api_error_content
+from app.api_errors import ApiError, build_api_error_content, build_validation_issues
 from app.database import init_database
 from app.config import get_settings
 from app.routers.api import router as api_router
@@ -97,22 +97,12 @@ async def api_request_validation_exception_handler(request, exc: RequestValidati
     if not _is_api_request_path(request.url.path):
         return await request_validation_exception_handler(request, exc)
 
-    validation_errors = []
-    for error in exc.errors():
-        location = ".".join(str(part) for part in error.get("loc", []) if part != "query")
-        validation_errors.append(
-            {
-                "field": location or "request",
-                "message": error.get("msg", "輸入格式錯誤。"),
-            }
-        )
-
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=build_api_error_content(
             "VALIDATION_ERROR",
             "API 請求參數驗證失敗，請確認必填欄位與格式。",
-            validation_errors=validation_errors,
+            validation_errors=build_validation_issues(exc.errors()),
         ),
     )
 

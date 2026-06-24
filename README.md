@@ -125,6 +125,13 @@ uvicorn app.main:app --reload
 - `EXTERNAL_SERVICE_ERROR`：外部資料來源失敗
 - `INTERNAL_SERVER_ERROR`：伺服器內部錯誤
 
+其中 `VALIDATION_ERROR` 的 `validation_errors.message` 目前已統一為繁體中文格式，優先涵蓋：
+
+- 缺少必要欄位
+- 日期格式錯誤
+- 整數 / 數值 / 文字型別不符
+- 其他未知驗證錯誤的安全 fallback
+
 ## 操作流程
 
 ### 1. 股票查詢
