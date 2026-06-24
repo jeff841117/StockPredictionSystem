@@ -1,4 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class ApiValidationIssue(BaseModel):
+    field: str
+    message: str
+
+
+class ApiErrorResponse(BaseModel):
+    error_code: str = Field(description="固定錯誤代碼，用於區分錯誤類型。")
+    message: str = Field(description="給 API 使用者閱讀的錯誤訊息。")
+    validation_errors: list[ApiValidationIssue] = Field(
+        default_factory=list,
+        description="輸入驗證錯誤明細；非驗證錯誤時為空陣列。",
+    )
 
 
 class HealthCheckResponse(BaseModel):

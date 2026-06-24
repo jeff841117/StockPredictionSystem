@@ -107,6 +107,24 @@ uvicorn app.main:app --reload
 - `/api/portfolio/positions`：讀取目前持股與未實現損益
 - `/api/portfolio/summary`：讀取投資組合摘要
 
+目前 `/api/*` 錯誤回應已統一為最小 JSON schema：
+
+```json
+{
+  "error_code": "INVALID_INPUT",
+  "message": "錯誤訊息",
+  "validation_errors": []
+}
+```
+
+常見錯誤代碼：
+
+- `VALIDATION_ERROR`：請求參數缺漏或格式不符 API 驗證
+- `INVALID_INPUT`：輸入通過 HTTP 層，但不符合商業規則
+- `NOT_FOUND`：查無資料
+- `EXTERNAL_SERVICE_ERROR`：外部資料來源失敗
+- `INTERNAL_SERVER_ERROR`：伺服器內部錯誤
+
 ## 操作流程
 
 ### 1. 股票查詢

@@ -1,8 +1,13 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 
+from app.api_errors import ApiError, build_api_error_content
 from app.database import init_database
 from app.config import get_settings
 from app.routers.api import router as api_router
@@ -76,6 +81,53 @@ app.include_router(trades_router)
 app.include_router(watchlist_router)
 app.include_router(api_router)
 init_database()
+
+
+def _is_api_request_path(path: str) -> bool:
+    return path == "/api" or path.startswith("/api/")
+
+
+@app.exception_handler(ApiError)
+async def api_error_exception_handler(request, exc: ApiError):
+    return JSONResponse(status_code=exc.status_code, content=exc.to_response().model_dump())
+
+
+@app.exception_handler(RequestValidationError)
+async def api_request_validation_exception_handler(request, exc: RequestValidationError):
+    if not _is_api_request_path(request.url.path):
+        return await request_validation_exception_handler(request, exc)
+
+    validation_errors = []
+    for error in exc.errors():
+        location = ".".join(str(part) for part in error.get("loc", []) if part != "query")
+        validation_errors.append(
+            {
+                "field": location or "request",
+                "message": error.get("msg", "輸入格式錯誤。"),
+            }
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=build_api_error_content(
+            "VALIDATION_ERROR",
+            "API 請求參數驗證失敗，請確認必填欄位與格式。",
+            validation_errors=validation_errors,
+        ),
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def api_http_exception_handler(request, exc: StarletteHTTPException):
+    if not _is_api_request_path(request.url.path):
+        return await http_exception_handler(request, exc)
+
+    error_code = "NOT_FOUND" if exc.status_code == status.HTTP_404_NOT_FOUND else "HTTP_ERROR"
+    message = exc.detail if isinstance(exc.detail, str) else "API 請求失敗。"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=build_api_error_content(error_code, message),
+    )
 
 
 @app.get(

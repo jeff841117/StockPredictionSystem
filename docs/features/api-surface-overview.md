@@ -61,15 +61,41 @@
 - `GET /api/portfolio/summary`
   - 讀取投資組合摘要
 
-## 4. 文件入口
+## 4. 統一錯誤 schema
+
+目前 `/api/*` 已統一使用最小錯誤 JSON 結構：
+
+```json
+{
+  "error_code": "INVALID_INPUT",
+  "message": "錯誤訊息",
+  "validation_errors": []
+}
+```
+
+錯誤代碼對應：
+
+- `VALIDATION_ERROR`
+  - API 參數缺漏或格式不符輸入驗證
+- `INVALID_INPUT`
+  - 商業規則層級的輸入錯誤，例如股票代號或日期區間不合法
+- `NOT_FOUND`
+  - 查無符合條件的資料
+- `EXTERNAL_SERVICE_ERROR`
+  - 外部資料來源失敗
+- `INTERNAL_SERVER_ERROR`
+  - 伺服器內部錯誤
+
+## 5. 文件入口
 
 - Swagger UI：`/docs`
 - ReDoc：`/redoc`
 - OpenAPI JSON：`/openapi.json`
 - 健康檢查：`/health`
 
-## 5. 本輪限制
+## 6. 本輪限制
 
 1. 本輪沒有重寫既有商業邏輯
 2. 本輪沒有把所有表單端點改成 JSON API
 3. 目前 JSON API 以讀取與展示為主，目標是提升平台感與作品集說服力
+4. 本輪只統一 `/api/*` 錯誤格式，未改動 HTML 頁面錯誤提示流程

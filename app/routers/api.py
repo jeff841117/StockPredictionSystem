@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
+from app.api_errors import ApiError, build_common_api_error_responses
 from app.schemas.api import (
     PortfolioOverviewResponse,
     PortfolioSummaryResponse,
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/api")
         "此端點為 JSON 資料介面；若要使用頁面版研究工作台，請改走 `/stocks/search`。"
     ),
     response_model=StockLookupResult,
+    responses=build_common_api_error_responses(include_not_found=True, include_external_failure=True),
 )
 def get_stock_detail_api(
     stock_no: str,
@@ -42,13 +44,19 @@ def get_stock_detail_api(
     try:
         return fetch_stock_detail(stock_no, start_date, end_date)
     except InvalidStockCodeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
     except InvalidDateRangeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
     except StockNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise ApiError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", str(exc)) from exc
     except ExternalServiceError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        raise ApiError(status.HTTP_502_BAD_GATEWAY, "EXTERNAL_SERVICE_ERROR", str(exc)) from exc
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "API 查詢處理失敗，請稍後再試。",
+        ) from exc
 
 
 @router.get(
@@ -57,9 +65,17 @@ def get_stock_detail_api(
     summary="取得收藏清單",
     description="回傳目前 SQLite 中的收藏股票清單。此端點只讀，不改動收藏資料。",
     response_model=list[WatchlistItemResponse],
+    responses=build_common_api_error_responses(),
 )
 def get_watchlist_items_api() -> list[WatchlistItemResponse]:
-    return [WatchlistItemResponse(**item.__dict__) for item in list_watchlist()]
+    try:
+        return [WatchlistItemResponse(**item.__dict__) for item in list_watchlist()]
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "收藏清單讀取失敗，請稍後再試。",
+        ) from exc
 
 
 @router.get(
@@ -68,9 +84,17 @@ def get_watchlist_items_api() -> list[WatchlistItemResponse]:
     summary="取得模擬交易紀錄",
     description="回傳目前 BUY / SELL 模擬交易紀錄，預設依交易時間新到舊排序。",
     response_model=list[TradeRecordResponse],
+    responses=build_common_api_error_responses(),
 )
 def get_trade_history_api() -> list[TradeRecordResponse]:
-    return [TradeRecordResponse(**trade.__dict__) for trade in list_trades()]
+    try:
+        return [TradeRecordResponse(**trade.__dict__) for trade in list_trades()]
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "交易紀錄讀取失敗，請稍後再試。",
+        ) from exc
 
 
 @router.get(
@@ -79,9 +103,17 @@ def get_trade_history_api() -> list[TradeRecordResponse]:
     summary="取得虛擬資金摘要",
     description="回傳初始虛擬資金、已使用資金與目前可用資金。",
     response_model=VirtualCashSummaryResponse,
+    responses=build_common_api_error_responses(),
 )
 def get_virtual_cash_summary_api() -> VirtualCashSummaryResponse:
-    return VirtualCashSummaryResponse(**get_virtual_cash_summary().__dict__)
+    try:
+        return VirtualCashSummaryResponse(**get_virtual_cash_summary().__dict__)
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "虛擬資金摘要讀取失敗，請稍後再試。",
+        ) from exc
 
 
 @router.get(
@@ -90,13 +122,21 @@ def get_virtual_cash_summary_api() -> VirtualCashSummaryResponse:
     summary="取得目前持股與未實現損益",
     description="回傳目前持股、最近收盤價估值與未實現損益摘要。",
     response_model=PortfolioOverviewResponse,
+    responses=build_common_api_error_responses(),
 )
 def get_portfolio_positions_api() -> PortfolioOverviewResponse:
-    positions, unrealized_summary = get_portfolio_overview()
-    return PortfolioOverviewResponse(
-        positions=[PositionSummaryResponse(**position.__dict__) for position in positions],
-        unrealized_summary=UnrealizedPnlSummaryResponse(**unrealized_summary.__dict__),
-    )
+    try:
+        positions, unrealized_summary = get_portfolio_overview()
+        return PortfolioOverviewResponse(
+            positions=[PositionSummaryResponse(**position.__dict__) for position in positions],
+            unrealized_summary=UnrealizedPnlSummaryResponse(**unrealized_summary.__dict__),
+        )
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "持股與未實現損益資料讀取失敗，請稍後再試。",
+        ) from exc
 
 
 @router.get(
@@ -107,6 +147,14 @@ def get_portfolio_positions_api() -> PortfolioOverviewResponse:
         "回傳整體投資組合摘要，包含現金、持股市值、已實現損益、未實現損益與總資產估值。"
     ),
     response_model=PortfolioSummaryResponse,
+    responses=build_common_api_error_responses(),
 )
 def get_portfolio_summary_api() -> PortfolioSummaryResponse:
-    return PortfolioSummaryResponse(**get_portfolio_summary().__dict__)
+    try:
+        return PortfolioSummaryResponse(**get_portfolio_summary().__dict__)
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "投資組合摘要讀取失敗，請稍後再試。",
+        ) from exc
