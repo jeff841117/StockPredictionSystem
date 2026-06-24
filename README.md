@@ -127,6 +127,7 @@ uvicorn app.main:app --reload
 - 顯示位置：股票查詢結果頁
 - 圖表形式：內嵌 SVG
 - 資料範圍：與表格資料相同
+- 可切換圖層：收盤價、MA5、MA20
 
 ### MA5 / MA20
 

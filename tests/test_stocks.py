@@ -70,6 +70,12 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("Research Summary", response.text)
         self.assertIn("區間最高 / 最低", response.text)
         self.assertIn("目前未持有", response.text)
+        self.assertIn("data-chart-layer-toggle=\"close\"", response.text)
+        self.assertIn("data-chart-layer-toggle=\"ma5\"", response.text)
+        self.assertIn("data-chart-layer-toggle=\"ma20\"", response.text)
+        self.assertIn("data-chart-layer=\"close\"", response.text)
+        self.assertIn("data-chart-layer=\"ma5\"", response.text)
+        self.assertIn("data-chart-layer=\"ma20\"", response.text)
 
     @patch("app.routers.stocks.get_position_for_stock")
     @patch("app.routers.stocks.fetch_stock_detail")
@@ -100,6 +106,7 @@ class StockSearchTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("資料筆數不足，暫時無法繪製收盤價走勢圖", response.text)
+        self.assertNotIn("data-chart-layer-toggle=", response.text)
 
     @patch("app.routers.stocks.get_position_for_stock")
     @patch("app.routers.stocks.fetch_stock_detail")
@@ -144,6 +151,52 @@ class StockSearchTests(unittest.TestCase):
         self.assertIn("目前持有 1000 股", response.text)
         self.assertIn("平均成本 800.00", response.text)
         self.assertIn("目前價格高於平均成本", response.text)
+
+    @patch("app.routers.stocks.get_position_for_stock")
+    @patch("app.routers.stocks.fetch_stock_detail")
+    def test_search_stock_chart_layer_toggle_script_present(self, mock_fetch, mock_position) -> None:
+        mock_position.return_value = None
+        mock_fetch.return_value = StockLookupResult(
+            stock_no="2330",
+            stock_name="台積電",
+            source_name="TWSE 每日成交資訊",
+            interval_start="2024-05-01",
+            interval_end="2024-05-31",
+            rows=[
+                StockPriceRow(
+                    trade_date="2024-05-31",
+                    open_price="838.00",
+                    high_price="846.00",
+                    low_price="821.00",
+                    close_price="821.00",
+                    volume="90,177,283",
+                    ma5="850.00",
+                    ma20="833.85",
+                ),
+                StockPriceRow(
+                    trade_date="2024-05-30",
+                    open_price="841.00",
+                    high_price="848.00",
+                    low_price="838.00",
+                    close_price="838.00",
+                    volume="42,535,118",
+                    ma5="850.60",
+                    ma20="837.10",
+                ),
+            ],
+        )
+
+        response = self.client.get(
+            "/stocks/search",
+            params={"stock_no": "2330", "start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("data-chart-legend=\"close\"", response.text)
+        self.assertIn("data-chart-legend=\"ma5\"", response.text)
+        self.assertIn("data-chart-legend=\"ma20\"", response.text)
+        self.assertIn("document.querySelectorAll('[data-chart-layer=\"' + layerName + '\"]')", response.text)
+        self.assertIn("classList.toggle(\"is-hidden\", !nextState)", response.text)
 
     @patch("app.routers.stocks.fetch_stock_detail")
     def test_search_stock_not_found_message(self, mock_fetch) -> None:

@@ -697,6 +697,33 @@ button,
     overflow-x: auto;
 }
 
+.chart-layer-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 14px;
+}
+
+.layer-toggle {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.layer-toggle.is-active {
+    border-color: rgba(18, 120, 109, 0.2);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.chart-layer.is-hidden {
+    display: none;
+}
+
 .chart-legend {
     display: flex;
     gap: 16px;
@@ -709,6 +736,11 @@ button,
     padding-left: 18px;
     color: var(--muted);
     font-size: 0.95rem;
+    transition: opacity 160ms ease;
+}
+
+.legend-item.is-muted {
+    opacity: 0.38;
 }
 
 .legend-item::before {
@@ -842,6 +874,14 @@ td .help-text {
 
     .price-main {
         font-size: 2.5rem;
+    }
+
+    .chart-layer-toolbar {
+        gap: 8px;
+    }
+
+    .layer-toggle {
+        flex: 1 1 100px;
     }
 
     .screener-showcase-heading .help-text {

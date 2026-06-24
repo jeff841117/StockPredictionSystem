@@ -120,6 +120,17 @@
             {% if close_price_chart %}
             <p>圖表區間：{{ close_price_chart.start_date }} 至 {{ close_price_chart.end_date }}</p>
             <p>MA5、MA20 依本次查詢區間的收盤價資料計算。</p>
+            <div class="chart-layer-toolbar" aria-label="圖表圖層切換">
+                <button class="layer-toggle is-active" type="button" data-chart-layer-toggle="close" aria-pressed="true">
+                    收盤價
+                </button>
+                <button class="layer-toggle is-active" type="button" data-chart-layer-toggle="ma5" aria-pressed="true">
+                    MA5
+                </button>
+                <button class="layer-toggle is-active" type="button" data-chart-layer-toggle="ma20" aria-pressed="true">
+                    MA20
+                </button>
+            </div>
             <div class="table-wrapper">
                 <svg
                     aria-label="收盤價走勢圖"
@@ -130,6 +141,8 @@
                     <line x1="36" y1="24" x2="36" y2="216" stroke="#94a3b8" stroke-width="1" />
                     <line x1="36" y1="216" x2="604" y2="216" stroke="#94a3b8" stroke-width="1" />
                     <polyline
+                        class="chart-layer"
+                        data-chart-layer="close"
                         fill="none"
                         stroke="#0f766e"
                         stroke-width="3"
@@ -137,6 +150,8 @@
                     />
                     {% if close_price_chart.ma5_svg_path %}
                     <polyline
+                        class="chart-layer"
+                        data-chart-layer="ma5"
                         fill="none"
                         stroke="#ea580c"
                         stroke-width="2"
@@ -145,6 +160,8 @@
                     {% endif %}
                     {% if close_price_chart.ma20_svg_path %}
                     <polyline
+                        class="chart-layer"
+                        data-chart-layer="ma20"
                         fill="none"
                         stroke="#2563eb"
                         stroke-width="2"
@@ -158,9 +175,9 @@
                 </svg>
             </div>
             <div class="chart-legend">
-                <span class="legend-item close">收盤價</span>
-                <span class="legend-item ma5">MA5</span>
-                <span class="legend-item ma20">MA20</span>
+                <span class="legend-item close" data-chart-legend="close">收盤價</span>
+                <span class="legend-item ma5" data-chart-legend="ma5">MA5</span>
+                <span class="legend-item ma20" data-chart-legend="ma20">MA20</span>
             </div>
             {% else %}
             <div class="error-box">
@@ -313,4 +330,31 @@
         </table>
     </div>
 </section>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var toggles = document.querySelectorAll("[data-chart-layer-toggle]");
+    if (!toggles.length) {
+        return;
+    }
+
+    toggles.forEach(function (toggle) {
+        toggle.addEventListener("click", function () {
+            var layerName = toggle.getAttribute("data-chart-layer-toggle");
+            var isActive = toggle.getAttribute("aria-pressed") === "true";
+            var nextState = !isActive;
+
+            toggle.setAttribute("aria-pressed", nextState ? "true" : "false");
+            toggle.classList.toggle("is-active", nextState);
+
+            document.querySelectorAll('[data-chart-layer="' + layerName + '"]').forEach(function (layer) {
+                layer.classList.toggle("is-hidden", !nextState);
+            });
+
+            document.querySelectorAll('[data-chart-legend="' + layerName + '"]').forEach(function (legend) {
+                legend.classList.toggle("is-muted", !nextState);
+            });
+        });
+    });
+});
+</script>
 {% endblock %}
