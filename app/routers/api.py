@@ -2,11 +2,13 @@ from fastapi import APIRouter, Query, status
 
 from app.api_errors import ApiError, build_common_api_error_responses
 from app.schemas.api import (
+    ApiMessageResponse,
     PortfolioOverviewResponse,
     PortfolioSummaryResponse,
     PositionSummaryResponse,
     TradeRecordResponse,
     UnrealizedPnlSummaryResponse,
+    WatchlistCreateRequest,
     VirtualCashSummaryResponse,
     WatchlistItemResponse,
 )
@@ -19,7 +21,14 @@ from app.services.stock_service import (
     fetch_stock_detail,
 )
 from app.services.trade_service import get_portfolio_overview, get_portfolio_summary, get_virtual_cash_summary, list_trades
-from app.services.watchlist_service import list_watchlist
+from app.services.watchlist_service import (
+    DuplicateWatchlistItemError,
+    InvalidWatchlistItemError,
+    WatchlistItemNotFoundError,
+    add_to_watchlist,
+    list_watchlist,
+    remove_from_watchlist,
+)
 
 
 router = APIRouter(prefix="/api")
@@ -75,6 +84,55 @@ def get_watchlist_items_api() -> list[WatchlistItemResponse]:
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",
             "收藏清單讀取失敗，請稍後再試。",
+        ) from exc
+
+
+@router.post(
+    "/watchlist/items",
+    tags=["Watchlist API"],
+    summary="新增收藏股票",
+    description="以 JSON API 新增一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
+    response_model=WatchlistItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=build_common_api_error_responses(include_conflict=True),
+)
+def create_watchlist_item_api(payload: WatchlistCreateRequest) -> WatchlistItemResponse:
+    try:
+        item = add_to_watchlist(payload.stock_no, payload.stock_name)
+        return WatchlistItemResponse(**item.__dict__)
+    except InvalidWatchlistItemError as exc:
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
+    except DuplicateWatchlistItemError as exc:
+        raise ApiError(status.HTTP_409_CONFLICT, "DUPLICATE_RESOURCE", str(exc)) from exc
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "收藏清單寫入失敗，請稍後再試。",
+        ) from exc
+
+
+@router.delete(
+    "/watchlist/items/{stock_no}",
+    tags=["Watchlist API"],
+    summary="移除收藏股票",
+    description="以 JSON API 移除一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
+    response_model=ApiMessageResponse,
+    responses=build_common_api_error_responses(include_not_found=True),
+)
+def delete_watchlist_item_api(stock_no: str) -> ApiMessageResponse:
+    try:
+        remove_from_watchlist(stock_no)
+        return ApiMessageResponse(message="已成功移除收藏股票。")
+    except InvalidWatchlistItemError as exc:
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
+    except WatchlistItemNotFoundError as exc:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "NOT_FOUND", str(exc)) from exc
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "收藏清單刪除失敗，請稍後再試。",
         ) from exc
 
 

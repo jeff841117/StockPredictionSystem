@@ -56,6 +56,12 @@ class ApiDocsTests(unittest.TestCase):
             stock_api["responses"]["400"]["content"]["application/json"]["schema"]["$ref"],
             "#/components/schemas/ApiErrorResponse",
         )
+        watchlist_post_api = payload["paths"]["/api/watchlist/items"]["post"]
+        self.assertIn("409", watchlist_post_api["responses"])
+        self.assertEqual(
+            watchlist_post_api["responses"]["409"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/ApiErrorResponse",
+        )
 
     def test_api_error_schema_for_invalid_stock_input(self) -> None:
         response = self.client.get(

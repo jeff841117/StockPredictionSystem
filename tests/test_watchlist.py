@@ -105,3 +105,58 @@ class WatchlistTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("已成功移除收藏股票", response.text)
         self.assertIn("目前尚無收藏股票", response.text)
+
+    def test_watchlist_api_create_success(self) -> None:
+        response = self.client.post(
+            "/api/watchlist/items",
+            json={"stock_no": "2330", "stock_name": "台積電"},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["stock_no"], "2330")
+        self.assertEqual(payload["stock_name"], "台積電")
+
+    def test_watchlist_api_create_duplicate_returns_uniform_error_schema(self) -> None:
+        add_to_watchlist("2330", "台積電", self.db_path)
+
+        response = self.client.post(
+            "/api/watchlist/items",
+            json={"stock_no": "2330", "stock_name": "台積電"},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            response.json(),
+            {
+                "error_code": "DUPLICATE_RESOURCE",
+                "message": "該股票已在收藏清單中，無法重複加入。",
+                "validation_errors": [],
+            },
+        )
+
+    def test_watchlist_api_create_validation_error_returns_translated_message(self) -> None:
+        response = self.client.post(
+            "/api/watchlist/items",
+            json={"stock_no": "2330"},
+        )
+
+        self.assertEqual(response.status_code, 422)
+        payload = response.json()
+        self.assertEqual(payload["error_code"], "VALIDATION_ERROR")
+        self.assertEqual(payload["message"], "API 請求參數驗證失敗，請確認必填欄位與格式。")
+        self.assertEqual(payload["validation_errors"][0]["field"], "body.stock_name")
+        self.assertEqual(payload["validation_errors"][0]["message"], "缺少必要欄位。")
+
+    def test_watchlist_api_delete_not_found_returns_uniform_error_schema(self) -> None:
+        response = self.client.delete("/api/watchlist/items/2330")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {
+                "error_code": "NOT_FOUND",
+                "message": "找不到要移除的收藏股票。",
+                "validation_errors": [],
+            },
+        )

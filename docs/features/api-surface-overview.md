@@ -46,6 +46,10 @@
 
 - `GET /api/watchlist/items`
   - 讀取目前收藏股票清單
+- `POST /api/watchlist/items`
+  - 新增收藏股票
+- `DELETE /api/watchlist/items/{stock_no}`
+  - 移除收藏股票
 
 ### Trading API
 
@@ -79,6 +83,8 @@
   - API 參數缺漏或格式不符輸入驗證
 - `INVALID_INPUT`
   - 商業規則層級的輸入錯誤，例如股票代號或日期區間不合法
+- `DUPLICATE_RESOURCE`
+  - 重複新增已存在的資源，例如重複加入同一檔收藏股票
 - `NOT_FOUND`
   - 查無符合條件的資料
 - `EXTERNAL_SERVICE_ERROR`

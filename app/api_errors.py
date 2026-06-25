@@ -41,6 +41,7 @@ def build_common_api_error_responses(
     *,
     include_not_found: bool = False,
     include_external_failure: bool = False,
+    include_conflict: bool = False,
 ) -> dict[int, dict]:
     responses = {
         status.HTTP_400_BAD_REQUEST: {
@@ -67,6 +68,12 @@ def build_common_api_error_responses(
         responses[status.HTTP_502_BAD_GATEWAY] = {
             "model": ApiErrorResponse,
             "description": "外部資料來源暫時失敗。",
+        }
+
+    if include_conflict:
+        responses[status.HTTP_409_CONFLICT] = {
+            "model": ApiErrorResponse,
+            "description": "資料衝突，例如重複新增相同資源。",
         }
 
     return responses

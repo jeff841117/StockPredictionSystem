@@ -130,6 +130,8 @@ docker compose up --build
 
 - `/api/stocks/{stock_no}`：查詢單一股票歷史資料與 MA5 / MA20
 - `/api/watchlist/items`：讀取收藏清單
+- `/api/watchlist/items` `POST`：新增收藏股票
+- `/api/watchlist/items/{stock_no}` `DELETE`：移除收藏股票
 - `/api/trades/history`：讀取模擬交易紀錄
 - `/api/trades/cash-summary`：讀取虛擬資金摘要
 - `/api/portfolio/positions`：讀取目前持股與未實現損益
@@ -149,6 +151,7 @@ docker compose up --build
 
 - `VALIDATION_ERROR`：請求參數缺漏或格式不符 API 驗證
 - `INVALID_INPUT`：輸入通過 HTTP 層，但不符合商業規則
+- `DUPLICATE_RESOURCE`：重複新增已存在的資源
 - `NOT_FOUND`：查無資料
 - `EXTERNAL_SERVICE_ERROR`：外部資料來源失敗
 - `INTERNAL_SERVER_ERROR`：伺服器內部錯誤

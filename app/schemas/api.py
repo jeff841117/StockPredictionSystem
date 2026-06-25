@@ -25,6 +25,15 @@ class WatchlistItemResponse(BaseModel):
     created_at: str
 
 
+class WatchlistCreateRequest(BaseModel):
+    stock_no: str = Field(description="台股代號。")
+    stock_name: str = Field(description="股票名稱。")
+
+
+class ApiMessageResponse(BaseModel):
+    message: str
+
+
 class TradeRecordResponse(BaseModel):
     id: int
     stock_no: str
