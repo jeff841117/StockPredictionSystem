@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
 
@@ -32,6 +33,8 @@ class TradeTests(unittest.TestCase):
         database.settings.watchlist_db_path = self.db_path
         init_database(self.db_path)
         self.client = TestClient(app)
+        self.client.post("/auth/register", data={"username": "demo_user", "password": "secret123"})
+        self.client.post("/auth/login", data={"username": "demo_user", "password": "secret123"})
 
     def tearDown(self) -> None:
         self.client.close()
@@ -415,3 +418,12 @@ class TradeTests(unittest.TestCase):
         self.assertEqual(summary.total_unrealized_pnl, "0.00")
         self.assertEqual(summary.total_asset_estimate, "920,000.00")
         self.assertEqual(summary.missing_price_count, 1)
+
+    def test_trades_page_requires_login(self) -> None:
+        self.client.get("/auth/logout")
+
+        response = self.client.get("/trades", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 303)
+        next_value = parse_qs(urlparse(response.headers["location"]).query)["next"][0]
+        self.assertEqual(next_value, "/trades")

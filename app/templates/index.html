@@ -5,6 +5,9 @@
 {% block content %}
 <section class="hero hero-screener">
     <div class="hero-copy">
+        {% if success_message %}
+        <div class="success-box">{{ success_message }}</div>
+        {% endif %}
         <p class="section-kicker">Stock Screener Workspace</p>
         <h2>把首頁改成像真正研究工具，而不只是查詢表單。</h2>
         <p>{{ message }}</p>

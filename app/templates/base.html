@@ -18,6 +18,13 @@
                 <div class="status-stack">
                     <span class="status-pill live">MVP v1</span>
                     <span class="status-pill soft">TWSE / 本機 SQLite</span>
+                    {% if request.state.current_username %}
+                    <span class="status-pill soft">已登入：{{ request.state.current_username }}</span>
+                    <a class="auth-link" href="{{ url_for('logout') }}">登出</a>
+                    {% else %}
+                    <a class="auth-link" href="{{ url_for('login_page') }}">登入</a>
+                    <a class="auth-link" href="{{ url_for('register_page') }}">註冊</a>
+                    {% endif %}
                 </div>
             </div>
             <nav class="site-nav">

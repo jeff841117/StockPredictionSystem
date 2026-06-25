@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api_errors import ApiError, build_api_error_content, build_validation_issues
 from app.database import init_database
 from app.config import get_settings
+from app.services.auth_service import get_current_username
+from app.routers.auth import router as auth_router
 from app.routers.api import router as api_router
 from app.routers.pages import router as pages_router
 from app.routers.stocks import router as stocks_router
@@ -76,11 +78,18 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(pages_router)
+app.include_router(auth_router)
 app.include_router(stocks_router)
 app.include_router(trades_router)
 app.include_router(watchlist_router)
 app.include_router(api_router)
 init_database()
+
+
+@app.middleware("http")
+async def attach_current_user_to_request(request, call_next):
+    request.state.current_username = get_current_username(request)
+    return await call_next(request)
 
 
 def _is_api_request_path(path: str) -> bool:

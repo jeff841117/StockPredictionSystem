@@ -94,6 +94,21 @@ input {
     gap: 10px;
 }
 
+.auth-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
 .status-pill,
 .ticker-pill,
 .exchange-pill {
@@ -330,6 +345,16 @@ button,
 .stack-form {
     display: grid;
     gap: 14px;
+}
+
+.auth-panel {
+    max-width: 560px;
+}
+
+.auth-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
 }
 
 .search-stage-panel .chip-toolbar {

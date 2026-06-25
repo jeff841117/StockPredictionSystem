@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}登入 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>登入</h2>
+    <p>使用最小帳號系統登入平台，體驗受保護頁面與登入狀態展示。</p>
+</section>
+
+<section class="result-panel auth-panel">
+    {% if success_message %}
+    <div class="success-box">{{ success_message }}</div>
+    {% endif %}
+    {% if error_message %}
+    <div class="error-box">{{ error_message }}</div>
+    {% endif %}
+    <p class="help-text">{{ single_user_scope_notice }}</p>
+    <form action="{{ url_for('login_submit') }}" method="post" class="auth-form">
+        <input type="hidden" name="next_path" value="{{ next_path }}">
+        <div class="field-group">
+            <label for="username">帳號</label>
+            <input id="username" name="username" type="text" autocomplete="username" required>
+        </div>
+        <div class="field-group">
+            <label for="password">密碼</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit">登入</button>
+    </form>
+    <p class="help-text">還沒有帳號？<a href="{{ url_for('register_page') }}">先建立一個最小展示帳號</a></p>
+</section>
+{% endblock %}

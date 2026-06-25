@@ -28,6 +28,7 @@ class Settings:
             str(BASE_DIR / "data" / "watchlist.db"),
         )
         self.initial_virtual_cash = Decimal(os.getenv("INITIAL_VIRTUAL_CASH", "1000000"))
+        self.session_secret = os.getenv("SESSION_SECRET", "dev-session-secret")
 
 
 @lru_cache

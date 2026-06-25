@@ -37,5 +37,6 @@ def index(request: Request):
             "screener_items": screener_items,
             "start_date": start_date,
             "end_date": end_date,
+            "success_message": request.query_params.get("message", ""),
         },
     )

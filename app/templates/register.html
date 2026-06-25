@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}註冊 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>建立帳號</h2>
+    <p>建立一個最小展示帳號，用來展示登入狀態、受保護頁面與平台入口。</p>
+</section>
+
+<section class="result-panel auth-panel">
+    {% if error_message %}
+    <div class="error-box">{{ error_message }}</div>
+    {% endif %}
+    <p class="help-text">{{ single_user_scope_notice }}</p>
+    <form action="{{ url_for('register_submit') }}" method="post" class="auth-form">
+        <div class="field-group">
+            <label for="username">帳號</label>
+            <input id="username" name="username" type="text" autocomplete="username" required>
+        </div>
+        <div class="field-group">
+            <label for="password">密碼</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required>
+        </div>
+        <button type="submit">註冊</button>
+    </form>
+    <p class="help-text">已經有帳號？<a href="{{ url_for('login_page') }}">前往登入</a></p>
+</section>
+{% endblock %}

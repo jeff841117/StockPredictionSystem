@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
 
@@ -25,6 +26,8 @@ class WatchlistTests(unittest.TestCase):
         database.settings.watchlist_db_path = self.db_path
         init_database(self.db_path)
         self.client = TestClient(app)
+        self.client.post("/auth/register", data={"username": "demo_user", "password": "secret123"})
+        self.client.post("/auth/login", data={"username": "demo_user", "password": "secret123"})
 
     def tearDown(self) -> None:
         self.client.close()
@@ -105,6 +108,15 @@ class WatchlistTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("已成功移除收藏股票", response.text)
         self.assertIn("目前尚無收藏股票", response.text)
+
+    def test_watchlist_page_requires_login(self) -> None:
+        self.client.get("/auth/logout")
+
+        response = self.client.get("/watchlist", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 303)
+        next_value = parse_qs(urlparse(response.headers["location"]).query)["next"][0]
+        self.assertEqual(next_value, "/watchlist")
 
     def test_watchlist_api_create_success(self) -> None:
         response = self.client.post(

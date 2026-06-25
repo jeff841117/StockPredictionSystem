@@ -18,6 +18,7 @@
 - 已實現損益
 - 未實現損益與市值
 - 投資組合摘要
+- 最小登入流程與受保護頁面
 
 ## 目前版本限制
 
@@ -25,7 +26,7 @@
 - 目前價格使用最近可取得收盤價，不是即時報價
 - 技術指標只提供 MA5 / MA20
 - 交易只支援最小 BUY / SELL 流程，不含手續費、交易稅、零股與當沖規則
-- 無使用者登入與多使用者隔離
+- 已具備最小登入流程，但尚未做多使用者資料隔離
 - 無資料庫進階遷移機制，使用本機 SQLite
 - 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
 
@@ -59,6 +60,7 @@ STOCK_QUERY_SOURCE=https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY
 STOCK_QUERY_DATE=20240501
 INITIAL_VIRTUAL_CASH=1000000
 WATCHLIST_DB_PATH=data/watchlist.db
+SESSION_SECRET=change-me-for-production
 ```
 
 說明：
@@ -67,6 +69,7 @@ WATCHLIST_DB_PATH=data/watchlist.db
 - `STOCK_QUERY_DATE`：首頁預設日期區間基準月份
 - `INITIAL_VIRTUAL_CASH`：模擬交易起始虛擬資金
 - `WATCHLIST_DB_PATH`：SQLite 資料庫位置，預設為 `data/watchlist.db`
+- `SESSION_SECRET`：session / cookie 簽章密鑰，正式展示環境請自行更換
 
 ## 啟動方式
 
@@ -84,6 +87,8 @@ uvicorn app.main:app --reload
 - 交易紀錄：`http://127.0.0.1:8000/trades`
 - 持股總覽：`http://127.0.0.1:8000/trades/portfolio`
 - 收藏清單：`http://127.0.0.1:8000/watchlist`
+- 登入頁：`http://127.0.0.1:8000/auth/login`
+- 註冊頁：`http://127.0.0.1:8000/auth/register`
 
 ## Docker 啟動方式
 
@@ -187,6 +192,16 @@ docker compose up --build
 4. 前往持股總覽頁查看持股、平均成本、損益與投資組合摘要
 5. 在持股頁輸入賣出資料完成模擬賣出
 
+### 4. 最小登入流程
+
+1. 前往 `/auth/register` 建立展示帳號
+2. 前往 `/auth/login` 登入
+3. 登入後可進入受保護頁面，例如：
+   - `/watchlist`
+   - `/trades`
+   - `/trades/portfolio`
+4. 右上角可查看登入狀態與登出入口
+
 ## 功能說明
 
 ### 股票查詢
@@ -221,6 +236,14 @@ docker compose up --build
 - 儲存方式：SQLite
 - 最小欄位：股票代號、股票名稱、建立時間
 - 同一股票不可重複加入
+
+### 最小登入流程
+
+- 目前支援帳號註冊、登入、登出
+- 密碼以雜湊形式儲存，不以明碼保存
+- 使用 session / cookie 維持登入狀態
+- 目前先保護收藏清單、交易紀錄與持股總覽頁
+- 本輪仍未把收藏 / 交易 / 持股資料做多使用者隔離，仍屬單使用者視角展示
 
 ### 模擬 BUY / SELL
 
@@ -303,6 +326,7 @@ python -m unittest discover -s tests -v
 - 股票查詢成功與錯誤情境
 - 走勢圖與 MA 欄位
 - 收藏清單 CRUD
+- 註冊、登入、登出與受保護頁面
 - BUY / SELL 驗證與資金檢查
 - 交易紀錄排序
 - 持股總覽、已實現損益、未實現損益與投資組合摘要
@@ -411,7 +435,6 @@ tests/
 
 ## 尚未完成項目
 
-- 使用者登入
 - 多使用者資料隔離
 - 即時行情
 - 更多技術指標

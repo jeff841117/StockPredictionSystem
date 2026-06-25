@@ -137,3 +137,13 @@ python -m unittest discover -s tests -v
 若要進行本輪前端總驗收，請直接參考：
 
 - [docs/features/frontend-phase2-acceptance-summary.md](features/frontend-phase2-acceptance-summary.md)
+
+若要直接追蹤 `main` / `daily-use` 兩條線的目前進度，請參考：
+
+- [docs/features/frontend-main-track-progress.md](features/frontend-main-track-progress.md)
+- [docs/features/frontend-daily-use-track-progress.md](features/frontend-daily-use-track-progress.md)
+
+若要追蹤整體平台 / 分支層級的後續規劃進度，請參考：
+
+- [docs/features/main-platform-track-progress.md](features/main-platform-track-progress.md)
+- [docs/features/daily-use-track-progress.md](features/daily-use-track-progress.md)
