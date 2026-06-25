@@ -27,7 +27,7 @@
 - 交易只支援最小 BUY / SELL 流程，不含手續費、交易稅、零股與當沖規則
 - 無使用者登入與多使用者隔離
 - 無資料庫進階遷移機制，使用本機 SQLite
-- 無正式部署流程
+- 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
 
 ## 執行環境
 
@@ -84,6 +84,34 @@ uvicorn app.main:app --reload
 - 交易紀錄：`http://127.0.0.1:8000/trades`
 - 持股總覽：`http://127.0.0.1:8000/trades/portfolio`
 - 收藏清單：`http://127.0.0.1:8000/watchlist`
+
+## Docker 啟動方式
+
+目前狀態說明：
+
+- 專案已補齊 `Dockerfile`、`docker-compose.yml` 與部署文件
+- 目前文件中的 Docker 指令與掛載策略已整理完成
+- 但目前這台開發機因 Windows / Docker 環境阻塞，尚未完成 `docker build`、`docker run`、`docker compose up --build` 的實機驗證
+- 因此目前可視為「Docker 文件已完成、實機驗證待補」
+
+### 使用 Dockerfile
+
+```bash
+docker build -t stock-prediction-system .
+docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data stock-prediction-system
+```
+
+### 使用 docker-compose
+
+```bash
+docker compose up --build
+```
+
+重點說明：
+
+- Docker 版本會以 `0.0.0.0:8000` 啟動 FastAPI
+- `data/` 需要掛載成 volume，避免容器重建後遺失 SQLite 資料
+- 若要自訂設定，可用環境變數或 `.env` 覆蓋預設值
 
 ## API 文件入口
 
@@ -276,6 +304,31 @@ python -m unittest discover -s tests -v
 - 交易紀錄排序
 - 持股總覽、已實現損益、未實現損益與投資組合摘要
 
+## Docker / Deployment 補充
+
+目前 `main` 主線已補最小 Docker 與部署文件，適合用於：
+
+- 作品集展示
+- 面試 demo
+- 手動部署交接
+
+部署重點：
+
+- 本機可直接用 `uvicorn` 啟動
+- 也可用 `Dockerfile` 或 `docker-compose.yml` 啟動
+- 若對外展示，可採 `Cloudflare + 自購網域 + 單一 VM / VPS + Docker` 架構
+- SQLite 目前仍需依賴 `data/` volume 做持久化
+
+更完整說明可參考：
+
+- [docs/deployment.md](docs/deployment.md)
+
+驗證狀態補充：
+
+- 本機 `uvicorn` 啟動流程已可用
+- Docker 指令與 volume 策略已整理完成
+- 但 Docker Desktop / WSL 在目前環境尚未成功補齊，因此未完成容器內 `/`、`/health`、`/docs` 的實機驗證
+
 ### 真實價格路徑 smoke test
 
 此測試會實際打到 TWSE 真實資料來源，用來補強 `get_latest_close_price()` 與最近價格回補路徑驗證。  
@@ -343,9 +396,15 @@ tests/
 
 - [docs/project-structure.md](docs/project-structure.md)
 - [docs/dev-workflow.md](docs/dev-workflow.md)
+- [docs/deployment.md](docs/deployment.md)
 - [docs/mvp-plan.md](docs/mvp-plan.md)
 - [docs/features/current-mvp-features.md](docs/features/current-mvp-features.md)
 - [docs/features/mvp-v1-acceptance-summary.md](docs/features/mvp-v1-acceptance-summary.md)
+- [docs/features/frontend-main-track-progress.md](docs/features/frontend-main-track-progress.md)
+- [docs/features/frontend-daily-use-track-progress.md](docs/features/frontend-daily-use-track-progress.md)
+- [docs/features/main-platform-track-progress.md](docs/features/main-platform-track-progress.md)
+- [docs/features/daily-use-track-progress.md](docs/features/daily-use-track-progress.md)
+- [docs/features/console-progress-overview.md](docs/features/console-progress-overview.md)
 
 ## 尚未完成項目
 
@@ -353,7 +412,6 @@ tests/
 - 多使用者資料隔離
 - 即時行情
 - 更多技術指標
-- 正式部署教學
 - 完整 API 文件
 - 資料庫 migration / schema versioning
 - 投資組合進階分析與圖表

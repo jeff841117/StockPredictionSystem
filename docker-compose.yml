@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: .
+    container_name: stock-prediction-system
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      APP_NAME: ${APP_NAME:-台股分析與模擬交易系統}
+      DEBUG: ${DEBUG:-false}
+      HOST: 0.0.0.0
+      PORT: 8000
+      STOCK_QUERY_SOURCE: ${STOCK_QUERY_SOURCE:-https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY}
+      STOCK_QUERY_DATE: ${STOCK_QUERY_DATE:-20240501}
+      INITIAL_VIRTUAL_CASH: ${INITIAL_VIRTUAL_CASH:-1000000}
+      WATCHLIST_DB_PATH: ${WATCHLIST_DB_PATH:-data/watchlist.db}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
