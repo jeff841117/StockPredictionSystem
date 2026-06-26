@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, get_settings
-from app.services.auth_service import get_current_username, require_login
+from app.services.auth_service import get_current_user, get_current_username, require_login
 from app.services.trade_service import (
     InsufficientHoldingsError,
     InsufficientFundsError,
@@ -36,16 +36,19 @@ def trades_page(request: Request):
     redirect_response = require_login(request)
     if redirect_response is not None:
         return redirect_response
+    user = get_current_user(request)
+    if user is None:
+        return RedirectResponse(url="/auth/login?next=/trades", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(
         request=request,
         name="trades.html",
         context={
             "project_name": settings.app_name,
-            "realized_pnl_summary": get_realized_pnl_summary(),
-            "trades": list_trades(),
-            "virtual_cash_summary": get_virtual_cash_summary(),
+            "realized_pnl_summary": get_realized_pnl_summary(user.id),
+            "trades": list_trades(user.id),
+            "virtual_cash_summary": get_virtual_cash_summary(user.id),
             "current_username": get_current_username(request),
-            "single_user_scope_notice": "目前登入版只提供頁面保護，交易與持股資料仍是單使用者視角。",
+            "single_user_scope_notice": "目前交易紀錄與資金摘要已依登入使用者隔離，僅顯示你的交易資料。",
         },
     )
 
@@ -64,8 +67,11 @@ def portfolio_page(
     redirect_response = require_login(request)
     if redirect_response is not None:
         return redirect_response
-    positions, unrealized_pnl_summary = get_portfolio_overview()
-    portfolio_summary = get_portfolio_summary()
+    user = get_current_user(request)
+    if user is None:
+        return RedirectResponse(url="/auth/login?next=/trades/portfolio", status_code=status.HTTP_303_SEE_OTHER)
+    positions, unrealized_pnl_summary = get_portfolio_overview(user.id)
+    portfolio_summary = get_portfolio_summary(user.id)
     return templates.TemplateResponse(
         request=request,
         name="portfolio.html",
@@ -76,7 +82,7 @@ def portfolio_page(
             "trade_error_message": trade_error_message,
             "unrealized_pnl_summary": unrealized_pnl_summary,
             "current_username": get_current_username(request),
-            "single_user_scope_notice": "目前登入版只提供頁面保護，交易與持股資料仍是單使用者視角。",
+            "single_user_scope_notice": "目前持股、損益與投資組合摘要已依登入使用者隔離，僅計算你的資料。",
         },
     )
 
@@ -100,6 +106,9 @@ def buy_trade(
     redirect_response = require_login(request, next_path="/")
     if redirect_response is not None:
         return redirect_response
+    user = get_current_user(request)
+    if user is None:
+        return RedirectResponse(url="/auth/login?next=/", status_code=status.HTTP_303_SEE_OTHER)
     base_params = {
         "stock_no": stock_no or "",
         "start_date": start_date or "",
@@ -112,6 +121,7 @@ def buy_trade(
             buy_price or "",
             buy_quantity or "",
             trade_time or "",
+            user.id,
         )
         query = urlencode({**base_params, "trade_message": "模擬買進成功，交易紀錄已保存。"})
         return RedirectResponse(
@@ -143,6 +153,9 @@ def sell_trade(
     redirect_response = require_login(request, next_path="/trades/portfolio")
     if redirect_response is not None:
         return redirect_response
+    user = get_current_user(request)
+    if user is None:
+        return RedirectResponse(url="/auth/login?next=/trades/portfolio", status_code=status.HTTP_303_SEE_OTHER)
     try:
         create_sell_trade(
             stock_no or "",
@@ -150,6 +163,7 @@ def sell_trade(
             sell_price or "",
             sell_quantity or "",
             trade_time or "",
+            user.id,
         )
         return RedirectResponse(
             url="/trades/portfolio",

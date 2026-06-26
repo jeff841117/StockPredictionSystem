@@ -95,6 +95,13 @@ def get_user_by_username(username: str, db_path: str | None = None) -> UserRecor
     )
 
 
+def get_current_user(request: Request, db_path: str | None = None) -> UserRecord | None:
+    username = get_current_username(request)
+    if username is None:
+        return None
+    return get_user_by_username(username, db_path)
+
+
 def get_current_username(request: Request) -> str | None:
     raw_cookie = request.cookies.get(AUTH_COOKIE_NAME, "")
     if not raw_cookie:

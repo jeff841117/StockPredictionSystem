@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app import database
 from app.database import init_database
 from app.main import app
+from app.services.auth_service import get_user_by_username
 from app.services.watchlist_service import (
     DuplicateWatchlistItemError,
     WatchlistItemNotFoundError,
@@ -27,6 +28,9 @@ class WatchlistTests(unittest.TestCase):
         init_database(self.db_path)
         self.client = TestClient(app)
         self.client.post("/auth/register", data={"username": "demo_user", "password": "secret123"})
+        self.client.post("/auth/register", data={"username": "other_user", "password": "secret123"})
+        self.demo_user = get_user_by_username("demo_user", self.db_path)
+        self.other_user = get_user_by_username("other_user", self.db_path)
         self.client.post("/auth/login", data={"username": "demo_user", "password": "secret123"})
 
     def tearDown(self) -> None:
@@ -36,31 +40,31 @@ class WatchlistTests(unittest.TestCase):
             os.remove(self.db_path)
 
     def test_add_to_watchlist_success(self) -> None:
-        item = add_to_watchlist("2330", "台積電", self.db_path)
-        items = list_watchlist(self.db_path)
+        item = add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
+        items = list_watchlist(self.demo_user.id, self.db_path)
 
         self.assertEqual(item.stock_no, "2330")
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].stock_name, "台積電")
 
     def test_add_to_watchlist_duplicate(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
         with self.assertRaises(DuplicateWatchlistItemError):
-            add_to_watchlist("2330", "台積電", self.db_path)
+            add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
     def test_remove_from_watchlist_success(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
-        remove_from_watchlist("2330", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
+        remove_from_watchlist("2330", self.demo_user.id, self.db_path)
 
-        self.assertEqual(list_watchlist(self.db_path), [])
+        self.assertEqual(list_watchlist(self.demo_user.id, self.db_path), [])
 
     def test_remove_from_watchlist_not_found(self) -> None:
         with self.assertRaises(WatchlistItemNotFoundError):
-            remove_from_watchlist("2330", self.db_path)
+            remove_from_watchlist("2330", self.demo_user.id, self.db_path)
 
     def test_watchlist_page_shows_items(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
         response = self.client.get("/watchlist")
 
@@ -80,7 +84,7 @@ class WatchlistTests(unittest.TestCase):
         self.assertIn("2330", response.text)
 
     def test_watchlist_add_route_duplicate(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
         response = self.client.post(
             "/watchlist/add",
@@ -97,7 +101,7 @@ class WatchlistTests(unittest.TestCase):
         self.assertIn("缺少股票代號或股票名稱", response.text)
 
     def test_watchlist_remove_route_success(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
         response = self.client.post(
             "/watchlist/remove",
@@ -130,7 +134,7 @@ class WatchlistTests(unittest.TestCase):
         self.assertEqual(payload["stock_name"], "台積電")
 
     def test_watchlist_api_create_duplicate_returns_uniform_error_schema(self) -> None:
-        add_to_watchlist("2330", "台積電", self.db_path)
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
 
         response = self.client.post(
             "/api/watchlist/items",
@@ -172,3 +176,31 @@ class WatchlistTests(unittest.TestCase):
                 "validation_errors": [],
             },
         )
+
+    def test_watchlist_is_isolated_between_users(self) -> None:
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
+        add_to_watchlist("2317", "鴻海", self.other_user.id, self.db_path)
+
+        demo_items = list_watchlist(self.demo_user.id, self.db_path)
+        other_items = list_watchlist(self.other_user.id, self.db_path)
+
+        self.assertEqual([item.stock_no for item in demo_items], ["2330"])
+        self.assertEqual([item.stock_no for item in other_items], ["2317"])
+
+    def test_watchlist_page_only_shows_current_user_items(self) -> None:
+        add_to_watchlist("2330", "台積電", self.demo_user.id, self.db_path)
+        add_to_watchlist("2317", "鴻海", self.other_user.id, self.db_path)
+
+        response = self.client.get("/watchlist")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("2330", response.text)
+        self.assertNotIn("2317", response.text)
+
+    def test_watchlist_api_requires_login(self) -> None:
+        self.client.get("/auth/logout")
+
+        response = self.client.get("/api/watchlist/items")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["error_code"], "UNAUTHORIZED")

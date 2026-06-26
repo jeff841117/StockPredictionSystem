@@ -22,7 +22,7 @@ class WatchlistItemNotFoundError(WatchlistServiceError):
     """Raised when the stock is not found in the watchlist."""
 
 
-def add_to_watchlist(stock_no: str, stock_name: str, db_path: str | None = None) -> WatchlistItem:
+def add_to_watchlist(stock_no: str, stock_name: str, user_id: int, db_path: str | None = None) -> WatchlistItem:
     normalized_stock_no = stock_no.strip()
     normalized_stock_name = stock_name.strip()
     if not normalized_stock_no or not normalized_stock_name:
@@ -33,8 +33,8 @@ def add_to_watchlist(stock_no: str, stock_name: str, db_path: str | None = None)
     try:
         with closing(get_connection(db_path)) as connection:
             connection.execute(
-                "INSERT INTO watchlist (stock_no, stock_name, created_at) VALUES (?, ?, ?)",
-                (normalized_stock_no, normalized_stock_name, created_at),
+                "INSERT INTO watchlist (user_id, stock_no, stock_name, created_at) VALUES (?, ?, ?, ?)",
+                (user_id, normalized_stock_no, normalized_stock_name, created_at),
             )
             connection.commit()
     except sqlite3.IntegrityError as exc:
@@ -47,11 +47,20 @@ def add_to_watchlist(stock_no: str, stock_name: str, db_path: str | None = None)
     )
 
 
-def list_watchlist(db_path: str | None = None) -> list[WatchlistItem]:
+def list_watchlist(user_id: int | None, db_path: str | None = None) -> list[WatchlistItem]:
+    if user_id is None:
+        return []
+
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         rows = connection.execute(
-            "SELECT stock_no, stock_name, created_at FROM watchlist ORDER BY created_at DESC, stock_no DESC"
+            """
+            SELECT stock_no, stock_name, created_at
+            FROM watchlist
+            WHERE user_id = ?
+            ORDER BY created_at DESC, stock_no DESC
+            """,
+            (user_id,),
         ).fetchall()
     return [
         WatchlistItem(
@@ -63,14 +72,17 @@ def list_watchlist(db_path: str | None = None) -> list[WatchlistItem]:
     ]
 
 
-def remove_from_watchlist(stock_no: str, db_path: str | None = None) -> None:
+def remove_from_watchlist(stock_no: str, user_id: int, db_path: str | None = None) -> None:
     normalized_stock_no = stock_no.strip()
     if not normalized_stock_no:
         raise InvalidWatchlistItemError("移除收藏失敗，缺少股票代號。")
 
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
-        cursor = connection.execute("DELETE FROM watchlist WHERE stock_no = ?", (normalized_stock_no,))
+        cursor = connection.execute(
+            "DELETE FROM watchlist WHERE user_id = ? AND stock_no = ?",
+            (user_id, normalized_stock_no),
+        )
         connection.commit()
     if cursor.rowcount == 0:
         raise WatchlistItemNotFoundError("找不到要移除的收藏股票。")

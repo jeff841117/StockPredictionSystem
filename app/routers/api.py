@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.api_errors import ApiError, build_common_api_error_responses
 from app.schemas.api import (
@@ -13,6 +13,7 @@ from app.schemas.api import (
     WatchlistItemResponse,
 )
 from app.schemas.stock import StockLookupResult
+from app.services.auth_service import get_current_user
 from app.services.stock_service import (
     ExternalServiceError,
     InvalidDateRangeError,
@@ -32,6 +33,17 @@ from app.services.watchlist_service import (
 
 
 router = APIRouter(prefix="/api")
+
+
+def _require_api_user(request: Request) -> int:
+    user = get_current_user(request)
+    if user is None:
+        raise ApiError(
+            status.HTTP_401_UNAUTHORIZED,
+            "UNAUTHORIZED",
+            "請先登入後再存取這個 API。",
+        )
+    return user.id
 
 
 @router.get(
@@ -72,13 +84,16 @@ def get_stock_detail_api(
     "/watchlist/items",
     tags=["Watchlist API"],
     summary="取得收藏清單",
-    description="回傳目前 SQLite 中的收藏股票清單。此端點只讀，不改動收藏資料。",
+    description="回傳目前登入使用者的收藏股票清單。此端點只讀，不改動收藏資料。",
     response_model=list[WatchlistItemResponse],
-    responses=build_common_api_error_responses(),
+    responses=build_common_api_error_responses(include_unauthorized=True),
 )
-def get_watchlist_items_api() -> list[WatchlistItemResponse]:
+def get_watchlist_items_api(request: Request) -> list[WatchlistItemResponse]:
     try:
-        return [WatchlistItemResponse(**item.__dict__) for item in list_watchlist()]
+        user_id = _require_api_user(request)
+        return [WatchlistItemResponse(**item.__dict__) for item in list_watchlist(user_id)]
+    except ApiError:
+        raise
     except Exception as exc:
         raise ApiError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -91,15 +106,18 @@ def get_watchlist_items_api() -> list[WatchlistItemResponse]:
     "/watchlist/items",
     tags=["Watchlist API"],
     summary="新增收藏股票",
-    description="以 JSON API 新增一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
+    description="以 JSON API 為目前登入使用者新增一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
     response_model=WatchlistItemResponse,
     status_code=status.HTTP_201_CREATED,
-    responses=build_common_api_error_responses(include_conflict=True),
+    responses=build_common_api_error_responses(include_conflict=True, include_unauthorized=True),
 )
-def create_watchlist_item_api(payload: WatchlistCreateRequest) -> WatchlistItemResponse:
+def create_watchlist_item_api(request: Request, payload: WatchlistCreateRequest) -> WatchlistItemResponse:
     try:
-        item = add_to_watchlist(payload.stock_no, payload.stock_name)
+        user_id = _require_api_user(request)
+        item = add_to_watchlist(payload.stock_no, payload.stock_name, user_id)
         return WatchlistItemResponse(**item.__dict__)
+    except ApiError:
+        raise
     except InvalidWatchlistItemError as exc:
         raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
     except DuplicateWatchlistItemError as exc:
@@ -116,14 +134,17 @@ def create_watchlist_item_api(payload: WatchlistCreateRequest) -> WatchlistItemR
     "/watchlist/items/{stock_no}",
     tags=["Watchlist API"],
     summary="移除收藏股票",
-    description="以 JSON API 移除一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
+    description="以 JSON API 移除目前登入使用者的一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
     response_model=ApiMessageResponse,
-    responses=build_common_api_error_responses(include_not_found=True),
+    responses=build_common_api_error_responses(include_not_found=True, include_unauthorized=True),
 )
-def delete_watchlist_item_api(stock_no: str) -> ApiMessageResponse:
+def delete_watchlist_item_api(request: Request, stock_no: str) -> ApiMessageResponse:
     try:
-        remove_from_watchlist(stock_no)
+        user_id = _require_api_user(request)
+        remove_from_watchlist(stock_no, user_id)
         return ApiMessageResponse(message="已成功移除收藏股票。")
+    except ApiError:
+        raise
     except InvalidWatchlistItemError as exc:
         raise ApiError(status.HTTP_400_BAD_REQUEST, "INVALID_INPUT", str(exc)) from exc
     except WatchlistItemNotFoundError as exc:
@@ -140,13 +161,16 @@ def delete_watchlist_item_api(stock_no: str) -> ApiMessageResponse:
     "/trades/history",
     tags=["Trading API"],
     summary="取得模擬交易紀錄",
-    description="回傳目前 BUY / SELL 模擬交易紀錄，預設依交易時間新到舊排序。",
+    description="回傳目前登入使用者的 BUY / SELL 模擬交易紀錄，預設依交易時間新到舊排序。",
     response_model=list[TradeRecordResponse],
-    responses=build_common_api_error_responses(),
+    responses=build_common_api_error_responses(include_unauthorized=True),
 )
-def get_trade_history_api() -> list[TradeRecordResponse]:
+def get_trade_history_api(request: Request) -> list[TradeRecordResponse]:
     try:
-        return [TradeRecordResponse(**trade.__dict__) for trade in list_trades()]
+        user_id = _require_api_user(request)
+        return [TradeRecordResponse(**trade.__dict__) for trade in list_trades(user_id)]
+    except ApiError:
+        raise
     except Exception as exc:
         raise ApiError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -159,13 +183,16 @@ def get_trade_history_api() -> list[TradeRecordResponse]:
     "/trades/cash-summary",
     tags=["Trading API"],
     summary="取得虛擬資金摘要",
-    description="回傳初始虛擬資金、已使用資金與目前可用資金。",
+    description="回傳目前登入使用者的初始虛擬資金、已使用資金與目前可用資金。",
     response_model=VirtualCashSummaryResponse,
-    responses=build_common_api_error_responses(),
+    responses=build_common_api_error_responses(include_unauthorized=True),
 )
-def get_virtual_cash_summary_api() -> VirtualCashSummaryResponse:
+def get_virtual_cash_summary_api(request: Request) -> VirtualCashSummaryResponse:
     try:
-        return VirtualCashSummaryResponse(**get_virtual_cash_summary().__dict__)
+        user_id = _require_api_user(request)
+        return VirtualCashSummaryResponse(**get_virtual_cash_summary(user_id).__dict__)
+    except ApiError:
+        raise
     except Exception as exc:
         raise ApiError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -178,17 +205,20 @@ def get_virtual_cash_summary_api() -> VirtualCashSummaryResponse:
     "/portfolio/positions",
     tags=["Portfolio API"],
     summary="取得目前持股與未實現損益",
-    description="回傳目前持股、最近收盤價估值與未實現損益摘要。",
+    description="回傳目前登入使用者的持股、最近收盤價估值與未實現損益摘要。",
     response_model=PortfolioOverviewResponse,
-    responses=build_common_api_error_responses(),
+    responses=build_common_api_error_responses(include_unauthorized=True),
 )
-def get_portfolio_positions_api() -> PortfolioOverviewResponse:
+def get_portfolio_positions_api(request: Request) -> PortfolioOverviewResponse:
     try:
-        positions, unrealized_summary = get_portfolio_overview()
+        user_id = _require_api_user(request)
+        positions, unrealized_summary = get_portfolio_overview(user_id)
         return PortfolioOverviewResponse(
             positions=[PositionSummaryResponse(**position.__dict__) for position in positions],
             unrealized_summary=UnrealizedPnlSummaryResponse(**unrealized_summary.__dict__),
         )
+    except ApiError:
+        raise
     except Exception as exc:
         raise ApiError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -202,14 +232,17 @@ def get_portfolio_positions_api() -> PortfolioOverviewResponse:
     tags=["Portfolio API"],
     summary="取得投資組合摘要",
     description=(
-        "回傳整體投資組合摘要，包含現金、持股市值、已實現損益、未實現損益與總資產估值。"
+        "回傳目前登入使用者的整體投資組合摘要，包含現金、持股市值、已實現損益、未實現損益與總資產估值。"
     ),
     response_model=PortfolioSummaryResponse,
-    responses=build_common_api_error_responses(),
+    responses=build_common_api_error_responses(include_unauthorized=True),
 )
-def get_portfolio_summary_api() -> PortfolioSummaryResponse:
+def get_portfolio_summary_api(request: Request) -> PortfolioSummaryResponse:
     try:
-        return PortfolioSummaryResponse(**get_portfolio_summary().__dict__)
+        user_id = _require_api_user(request)
+        return PortfolioSummaryResponse(**get_portfolio_summary(user_id).__dict__)
+    except ApiError:
+        raise
     except Exception as exc:
         raise ApiError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -34,7 +34,10 @@ class InsufficientHoldingsError(TradeServiceError):
     """Raised when holdings are not enough for the sell order."""
 
 
-def get_virtual_cash_summary(db_path: str | None = None) -> VirtualCashSummary:
+def get_virtual_cash_summary(user_id: int | None = None, db_path: str | None = None) -> VirtualCashSummary:
+    if user_id is None:
+        return _build_empty_cash_summary()
+
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         row = connection.execute(
@@ -43,7 +46,9 @@ def get_virtual_cash_summary(db_path: str | None = None) -> VirtualCashSummary:
                 COALESCE(SUM(CASE WHEN trade_type = 'BUY' THEN total_amount ELSE 0 END), 0) AS buy_total,
                 COALESCE(SUM(CASE WHEN trade_type = 'SELL' THEN total_amount ELSE 0 END), 0) AS sell_total
             FROM trades
-            """
+            WHERE user_id = ?
+            """,
+            (user_id,),
         ).fetchone()
     used_cash = Decimal(str(row["buy_total"])) - Decimal(str(row["sell_total"]))
     initial_cash = settings.initial_virtual_cash
@@ -55,26 +60,29 @@ def get_virtual_cash_summary(db_path: str | None = None) -> VirtualCashSummary:
     )
 
 
-def list_trades(db_path: str | None = None) -> list[TradeRecord]:
-    _, trade_records, _ = _build_trade_ledger(db_path)
+def list_trades(user_id: int | None = None, db_path: str | None = None) -> list[TradeRecord]:
+    _, trade_records, _ = _build_trade_ledger(user_id, db_path)
     return list(reversed(trade_records))
 
 
-def list_positions(db_path: str | None = None) -> list[PositionSummary]:
-    raw_positions, _, _ = _build_trade_ledger(db_path)
+def list_positions(user_id: int | None = None, db_path: str | None = None) -> list[PositionSummary]:
+    raw_positions, _, _ = _build_trade_ledger(user_id, db_path)
     return _build_position_summaries(raw_positions)
 
 
-def get_position_for_stock(stock_no: str, db_path: str | None = None) -> PositionSummary | None:
+def get_position_for_stock(stock_no: str, user_id: int | None = None, db_path: str | None = None) -> PositionSummary | None:
     normalized_stock_no = stock_no.strip()
-    for position in list_positions(db_path):
+    for position in list_positions(user_id, db_path):
         if position.stock_no == normalized_stock_no:
             return position
     return None
 
 
-def get_portfolio_overview(db_path: str | None = None) -> tuple[list[PositionSummary], UnrealizedPnlSummary]:
-    raw_positions, _, _ = _build_trade_ledger(db_path)
+def get_portfolio_overview(
+    user_id: int | None = None,
+    db_path: str | None = None,
+) -> tuple[list[PositionSummary], UnrealizedPnlSummary]:
+    raw_positions, _, _ = _build_trade_ledger(user_id, db_path)
     base_positions = _build_position_summaries(raw_positions)
     positions: list[PositionSummary] = []
     total_unrealized_pnl = Decimal("0")
@@ -142,10 +150,10 @@ def get_portfolio_overview(db_path: str | None = None) -> tuple[list[PositionSum
     )
 
 
-def get_portfolio_summary(db_path: str | None = None) -> PortfolioSummary:
-    virtual_cash_summary = get_virtual_cash_summary(db_path)
-    realized_pnl_summary = get_realized_pnl_summary(db_path)
-    positions, unrealized_pnl_summary = get_portfolio_overview(db_path)
+def get_portfolio_summary(user_id: int | None = None, db_path: str | None = None) -> PortfolioSummary:
+    virtual_cash_summary = get_virtual_cash_summary(user_id, db_path)
+    realized_pnl_summary = get_realized_pnl_summary(user_id, db_path)
+    positions, unrealized_pnl_summary = get_portfolio_overview(user_id, db_path)
 
     holdings_market_value = Decimal("0")
     for position in positions:
@@ -189,8 +197,8 @@ def _build_position_summaries(raw_positions: dict[str, dict[str, Decimal | int |
     return positions
 
 
-def get_realized_pnl_summary(db_path: str | None = None) -> RealizedPnlSummary:
-    _, _, total_realized_pnl = _build_trade_ledger(db_path)
+def get_realized_pnl_summary(user_id: int | None = None, db_path: str | None = None) -> RealizedPnlSummary:
+    _, _, total_realized_pnl = _build_trade_ledger(user_id, db_path)
     return RealizedPnlSummary(total_realized_pnl=_format_money(total_realized_pnl))
 
 
@@ -200,6 +208,7 @@ def create_buy_trade(
     price_text: str,
     quantity_text: str,
     trade_time_text: str,
+    user_id: int,
     db_path: str | None = None,
 ) -> TradeRecord:
     normalized_stock_no = stock_no.strip()
@@ -227,7 +236,7 @@ def create_buy_trade(
         raise InvalidTradeInputError("買進時間格式錯誤，請重新輸入。") from exc
 
     total_amount = price * quantity
-    available_cash = Decimal(get_virtual_cash_summary(db_path).available_cash.replace(",", ""))
+    available_cash = Decimal(get_virtual_cash_summary(user_id, db_path).available_cash.replace(",", ""))
     if total_amount > available_cash:
         raise InsufficientFundsError("虛擬資金不足，無法完成此次買進。")
 
@@ -235,10 +244,11 @@ def create_buy_trade(
     with closing(get_connection(db_path)) as connection:
         cursor = connection.execute(
             """
-            INSERT INTO trades (stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount)
-            VALUES (?, ?, 'BUY', ?, ?, ?, ?)
+            INSERT INTO trades (user_id, stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount)
+            VALUES (?, ?, ?, 'BUY', ?, ?, ?, ?)
             """,
             (
+                user_id,
                 normalized_stock_no,
                 normalized_stock_name,
                 _format_storage_amount(price),
@@ -267,6 +277,7 @@ def create_sell_trade(
     price_text: str,
     quantity_text: str,
     trade_time_text: str,
+    user_id: int,
     db_path: str | None = None,
 ) -> TradeRecord:
     normalized_stock_no = stock_no.strip()
@@ -293,12 +304,12 @@ def create_sell_trade(
     except ValueError as exc:
         raise InvalidTradeInputError("賣出時間格式錯誤，請重新輸入。") from exc
 
-    holdings_lookup = {position.stock_no: position for position in list_positions(db_path)}
+    holdings_lookup = {position.stock_no: position for position in list_positions(user_id, db_path)}
     position = holdings_lookup.get(normalized_stock_no)
     if position is None or quantity > position.quantity:
         raise InsufficientHoldingsError("目前持股不足，無法完成此次賣出。")
 
-    raw_positions, _, _ = _build_trade_ledger(db_path)
+    raw_positions, _, _ = _build_trade_ledger(user_id, db_path)
     state = raw_positions.get(normalized_stock_no)
     if state is None:
         raise InsufficientHoldingsError("目前持股不足，無法完成此次賣出。")
@@ -311,10 +322,11 @@ def create_sell_trade(
     with closing(get_connection(db_path)) as connection:
         cursor = connection.execute(
             """
-            INSERT INTO trades (stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount)
-            VALUES (?, ?, 'SELL', ?, ?, ?, ?)
+            INSERT INTO trades (user_id, stock_no, stock_name, trade_type, price, quantity, trade_time, total_amount)
+            VALUES (?, ?, ?, 'SELL', ?, ?, ?, ?)
             """,
             (
+                user_id,
                 normalized_stock_no,
                 normalized_stock_name,
                 _format_storage_amount(price),
@@ -338,6 +350,15 @@ def create_sell_trade(
     )
 
 
+def _build_empty_cash_summary() -> VirtualCashSummary:
+    initial_cash = settings.initial_virtual_cash
+    return VirtualCashSummary(
+        initial_cash=_format_money(initial_cash),
+        used_cash=_format_money(Decimal("0")),
+        available_cash=_format_money(initial_cash),
+    )
+
+
 def _format_money(amount: Decimal) -> str:
     return f"{amount:,.2f}"
 
@@ -347,8 +368,12 @@ def _format_storage_amount(amount: Decimal) -> str:
 
 
 def _build_trade_ledger(
+    user_id: int | None = None,
     db_path: str | None = None,
 ) -> tuple[dict[str, dict[str, Decimal | int | str]], list[TradeRecord], Decimal]:
+    if user_id is None:
+        return {}, [], Decimal("0")
+
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         rows = connection.execute(
@@ -363,8 +388,10 @@ def _build_trade_ledger(
                 total_amount,
                 trade_time
             FROM trades
+            WHERE user_id = ?
             ORDER BY trade_time ASC, id ASC
-            """
+            """,
+            (user_id,),
         ).fetchall()
 
     raw_positions: dict[str, dict[str, Decimal | int | str]] = {}

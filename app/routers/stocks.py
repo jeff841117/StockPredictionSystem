@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, get_settings
+from app.services.auth_service import get_current_user
 from app.services.stock_service import (
     ExternalServiceError,
     InvalidDateRangeError,
@@ -61,6 +62,7 @@ def _render_error(
     status_code: int,
 ) -> HTMLResponse:
     default_start_date, default_end_date = get_default_date_range()
+    current_user = get_current_user(request)
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -68,7 +70,7 @@ def _render_error(
             "project_name": settings.app_name,
             "message": "輸入台股代號與日期區間後，即可查詢對應的歷史成交資料。",
             "fixed_interval": get_default_interval_label(),
-            "portfolio_summary": get_portfolio_summary(),
+            "portfolio_summary": get_portfolio_summary(current_user.id if current_user is not None else None),
             "stock_no": stock_no,
             "start_date": start_date or default_start_date,
             "end_date": end_date or default_end_date,
@@ -106,7 +108,9 @@ def search_stock(
     except ExternalServiceError as exc:
         return _render_error(request, stock_no, start_date, end_date, str(exc), status.HTTP_502_BAD_GATEWAY)
 
-    position = get_position_for_stock(result.stock_no)
+    current_user = get_current_user(request)
+    current_user_id = current_user.id if current_user is not None else None
+    position = get_position_for_stock(result.stock_no, current_user_id)
 
     return templates.TemplateResponse(
         request=request,
@@ -123,6 +127,6 @@ def search_stock(
             "result": result,
             "trade_message": trade_message,
             "trade_error_message": trade_error_message,
-            "virtual_cash_summary": get_virtual_cash_summary(),
+            "virtual_cash_summary": get_virtual_cash_summary(current_user_id),
         },
     )

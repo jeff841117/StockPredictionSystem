@@ -42,6 +42,7 @@ def build_common_api_error_responses(
     include_not_found: bool = False,
     include_external_failure: bool = False,
     include_conflict: bool = False,
+    include_unauthorized: bool = False,
 ) -> dict[int, dict]:
     responses = {
         status.HTTP_400_BAD_REQUEST: {
@@ -74,6 +75,12 @@ def build_common_api_error_responses(
         responses[status.HTTP_409_CONFLICT] = {
             "model": ApiErrorResponse,
             "description": "資料衝突，例如重複新增相同資源。",
+        }
+
+    if include_unauthorized:
+        responses[status.HTTP_401_UNAUTHORIZED] = {
+            "model": ApiErrorResponse,
+            "description": "尚未登入，無法存取需要登入的資料。",
         }
 
     return responses

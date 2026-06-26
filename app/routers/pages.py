@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
+from app.services.auth_service import get_current_user
 from app.services.stock_service import get_default_date_range, get_default_interval_label, get_home_screener_items
 from app.services.trade_service import get_portfolio_summary
 
@@ -24,7 +25,8 @@ settings = get_settings()
 def index(request: Request):
     start_date, end_date = get_default_date_range()
     screener_items, screener_fallback_message = get_home_screener_items(start_date_text=start_date, end_date_text=end_date)
-    portfolio_summary = get_portfolio_summary()
+    current_user = get_current_user(request)
+    portfolio_summary = get_portfolio_summary(current_user.id if current_user is not None else None)
     return templates.TemplateResponse(
         request=request,
         name="index.html",
