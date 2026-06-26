@@ -327,3 +327,22 @@
    - 舊資料庫
    - 多使用者隔離
    - 異常 legacy 資料情境
+
+---
+
+## 實作狀態補充
+
+目前專案已依這份規格補上最小 SQLite migration 實作，方向如下：
+
+1. 啟動時由 `init_database()` 自動執行
+2. 使用 `schema_meta` 保存最小 `schema_version`
+3. 支援：
+   - 空資料庫直接建立目前 schema
+   - 舊版 `watchlist / trades` 重建並搬移到含 `user_id` 的版本
+4. 若舊資料存在但 `users` 為空，會中止 migration 並拋出明確錯誤，避免假裝完成歸戶
+
+這仍屬最小方案，不應誤解為：
+
+1. 已導入 Alembic
+2. 已具備通用 migration pipeline
+3. 已有 rollback framework

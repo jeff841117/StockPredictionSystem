@@ -27,7 +27,7 @@
 - 技術指標只提供 MA5 / MA20
 - 交易只支援最小 BUY / SELL 流程，不含手續費、交易稅、零股與當沖規則
 - 已具備最小登入與資料隔離，但尚未有完整權限系統、角色模型與更細緻的授權控管
-- 目前仍未導入正式 migration framework，資料庫升級策略以 SQLite 最小重建 / 搬移規格為主
+- 目前已具備最小 SQLite migration 與 schema version 機制，但仍未導入正式 migration framework
 - 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
 
 ## 執行環境
@@ -70,6 +70,25 @@ SESSION_SECRET=change-me-for-production
 - `INITIAL_VIRTUAL_CASH`：模擬交易起始虛擬資金
 - `WATCHLIST_DB_PATH`：SQLite 資料庫位置，預設為 `data/watchlist.db`
 - `SESSION_SECRET`：session / cookie 簽章密鑰，正式展示環境請自行更換
+
+## 資料庫 migration 最小方案
+
+目前專案已提供最小 SQLite migration 機制：
+
+1. 啟動時會自動執行 `init_database()`
+2. 會建立 `schema_meta` 表保存目前 `schema_version`
+3. 可區分空資料庫初始化與舊資料庫升級
+4. 目前目標版本為支援 `watchlist.user_id`、`trades.user_id` 的資料隔離版本
+
+目前限制：
+
+1. 不是 Alembic 或完整 migration framework
+2. 沒有通用 rollback 機制
+3. 若偵測到舊版 `watchlist / trades` 有資料、但 `users` 為空，會中止 migration 並要求人工處理 legacy 資料
+
+更完整規格可參考：
+
+- [docs/features/data-isolation-migration-spec.md](docs/features/data-isolation-migration-spec.md)
 
 ## 啟動方式
 
