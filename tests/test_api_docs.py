@@ -62,6 +62,40 @@ class ApiDocsTests(unittest.TestCase):
             watchlist_post_api["responses"]["409"]["content"]["application/json"]["schema"]["$ref"],
             "#/components/schemas/ApiErrorResponse",
         )
+        self.assertEqual(
+            stock_api["responses"]["200"]["content"]["application/json"]["example"]["stock_no"],
+            "2330",
+        )
+        self.assertIn(
+            "validation_error",
+            stock_api["responses"]["422"]["content"]["application/json"]["examples"],
+        )
+        self.assertIn(
+            "external_service_error",
+            stock_api["responses"]["502"]["content"]["application/json"]["examples"],
+        )
+        self.assertIn(
+            "duplicate_resource",
+            watchlist_post_api["responses"]["409"]["content"]["application/json"]["examples"],
+        )
+        self.assertEqual(
+            watchlist_post_api["requestBody"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/WatchlistCreateRequest",
+        )
+
+    def test_openapi_schema_contains_examples_for_core_api_components(self) -> None:
+        response = self.client.get("/openapi.json")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+
+        watchlist_request = payload["components"]["schemas"]["WatchlistCreateRequest"]
+        api_error_response = payload["components"]["schemas"]["ApiErrorResponse"]
+        stock_lookup_result = payload["components"]["schemas"]["StockLookupResult"]
+
+        self.assertEqual(watchlist_request["example"]["stock_no"], "2330")
+        self.assertEqual(api_error_response["example"]["error_code"], "INVALID_INPUT")
+        self.assertEqual(stock_lookup_result["example"]["stock_name"], "台積電")
 
     def test_api_error_schema_for_invalid_stock_input(self) -> None:
         response = self.client.get(

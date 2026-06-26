@@ -34,6 +34,86 @@ from app.services.watchlist_service import (
 
 router = APIRouter(prefix="/api")
 
+STOCK_LOOKUP_RESPONSE_EXAMPLE = {
+    "stock_no": "2330",
+    "stock_name": "台積電",
+    "source_name": "TWSE 每日成交資訊",
+    "interval_start": "2024-05-01",
+    "interval_end": "2024-05-31",
+    "rows": [
+        {
+            "trade_date": "2024-05-31",
+            "open_price": "838.00",
+            "high_price": "846.00",
+            "low_price": "821.00",
+            "close_price": "821.00",
+            "volume": "90,177,283",
+            "ma5": "850.00",
+            "ma20": "833.85",
+        }
+    ],
+}
+
+WATCHLIST_LIST_RESPONSE_EXAMPLE = [
+    {
+        "stock_no": "2330",
+        "stock_name": "台積電",
+        "created_at": "2024-05-31 10:00:00",
+    }
+]
+
+TRADE_HISTORY_RESPONSE_EXAMPLE = [
+    {
+        "id": 12,
+        "stock_no": "2330",
+        "stock_name": "台積電",
+        "trade_type": "SELL",
+        "price": "900.00",
+        "quantity": 40,
+        "trade_time": "2024-06-01 09:00:00",
+        "total_amount": "36,000.00",
+        "realized_pnl": "4,000.00",
+    }
+]
+
+VIRTUAL_CASH_RESPONSE_EXAMPLE = {
+    "initial_cash": "1,000,000.00",
+    "used_cash": "44,000.00",
+    "available_cash": "956,000.00",
+}
+
+PORTFOLIO_OVERVIEW_RESPONSE_EXAMPLE = {
+    "positions": [
+        {
+            "stock_no": "2330",
+            "stock_name": "台積電",
+            "quantity": 60,
+            "average_cost": "800.00",
+            "total_buy_amount": "48,000.00",
+            "current_price": "850.00",
+            "market_value": "51,000.00",
+            "unrealized_pnl": "3,000.00",
+            "price_note": "",
+        }
+    ],
+    "unrealized_summary": {
+        "total_unrealized_pnl": "3,000.00",
+        "priced_position_count": 1,
+        "missing_price_count": 0,
+    },
+}
+
+PORTFOLIO_SUMMARY_RESPONSE_EXAMPLE = {
+    "initial_cash": "1,000,000.00",
+    "available_cash": "956,000.00",
+    "used_cash": "44,000.00",
+    "holdings_market_value": "51,000.00",
+    "total_realized_pnl": "4,000.00",
+    "total_unrealized_pnl": "3,000.00",
+    "total_asset_estimate": "1,007,000.00",
+    "missing_price_count": 0,
+}
+
 
 def _require_api_user(request: Request) -> int:
     user = get_current_user(request)
@@ -55,12 +135,18 @@ def _require_api_user(request: Request) -> int:
         "此端點為 JSON 資料介面；若要使用頁面版研究工作台，請改走 `/stocks/search`。"
     ),
     response_model=StockLookupResult,
-    responses=build_common_api_error_responses(include_not_found=True, include_external_failure=True),
+    responses={
+        200: {
+            "description": "成功回傳單一股票的歷史資料與均線欄位。",
+            "content": {"application/json": {"example": STOCK_LOOKUP_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_not_found=True, include_external_failure=True),
+    },
 )
 def get_stock_detail_api(
     stock_no: str,
-    start_date: str = Query(..., description="查詢開始日期，格式為 YYYY-MM-DD。"),
-    end_date: str = Query(..., description="查詢結束日期，格式為 YYYY-MM-DD。"),
+    start_date: str = Query(..., description="查詢開始日期，格式為 YYYY-MM-DD。", example="2024-05-01"),
+    end_date: str = Query(..., description="查詢結束日期，格式為 YYYY-MM-DD。", example="2024-05-31"),
 ) -> StockLookupResult:
     try:
         return fetch_stock_detail(stock_no, start_date, end_date)
@@ -86,7 +172,13 @@ def get_stock_detail_api(
     summary="取得收藏清單",
     description="回傳目前登入使用者的收藏股票清單。此端點只讀，不改動收藏資料。",
     response_model=list[WatchlistItemResponse],
-    responses=build_common_api_error_responses(include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功回傳目前登入使用者的收藏股票清單。",
+            "content": {"application/json": {"example": WATCHLIST_LIST_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_unauthorized=True),
+    },
 )
 def get_watchlist_items_api(request: Request) -> list[WatchlistItemResponse]:
     try:
@@ -109,7 +201,21 @@ def get_watchlist_items_api(request: Request) -> list[WatchlistItemResponse]:
     description="以 JSON API 為目前登入使用者新增一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
     response_model=WatchlistItemResponse,
     status_code=status.HTTP_201_CREATED,
-    responses=build_common_api_error_responses(include_conflict=True, include_unauthorized=True),
+    responses={
+        201: {
+            "description": "成功新增一筆收藏股票資料。",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "stock_no": "2330",
+                        "stock_name": "台積電",
+                        "created_at": "2024-05-31 10:00:00",
+                    }
+                }
+            },
+        },
+        **build_common_api_error_responses(include_conflict=True, include_unauthorized=True),
+    },
 )
 def create_watchlist_item_api(request: Request, payload: WatchlistCreateRequest) -> WatchlistItemResponse:
     try:
@@ -136,7 +242,13 @@ def create_watchlist_item_api(request: Request, payload: WatchlistCreateRequest)
     summary="移除收藏股票",
     description="以 JSON API 移除目前登入使用者的一筆收藏股票資料。此端點不影響既有 HTML 表單提交流程。",
     response_model=ApiMessageResponse,
-    responses=build_common_api_error_responses(include_not_found=True, include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功移除收藏股票。",
+            "content": {"application/json": {"example": {"message": "已成功移除收藏股票。"}}},
+        },
+        **build_common_api_error_responses(include_not_found=True, include_unauthorized=True),
+    },
 )
 def delete_watchlist_item_api(request: Request, stock_no: str) -> ApiMessageResponse:
     try:
@@ -163,7 +275,13 @@ def delete_watchlist_item_api(request: Request, stock_no: str) -> ApiMessageResp
     summary="取得模擬交易紀錄",
     description="回傳目前登入使用者的 BUY / SELL 模擬交易紀錄，預設依交易時間新到舊排序。",
     response_model=list[TradeRecordResponse],
-    responses=build_common_api_error_responses(include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功回傳目前登入使用者的交易紀錄。",
+            "content": {"application/json": {"example": TRADE_HISTORY_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_unauthorized=True),
+    },
 )
 def get_trade_history_api(request: Request) -> list[TradeRecordResponse]:
     try:
@@ -185,7 +303,13 @@ def get_trade_history_api(request: Request) -> list[TradeRecordResponse]:
     summary="取得虛擬資金摘要",
     description="回傳目前登入使用者的初始虛擬資金、已使用資金與目前可用資金。",
     response_model=VirtualCashSummaryResponse,
-    responses=build_common_api_error_responses(include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功回傳目前登入使用者的虛擬資金摘要。",
+            "content": {"application/json": {"example": VIRTUAL_CASH_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_unauthorized=True),
+    },
 )
 def get_virtual_cash_summary_api(request: Request) -> VirtualCashSummaryResponse:
     try:
@@ -207,7 +331,13 @@ def get_virtual_cash_summary_api(request: Request) -> VirtualCashSummaryResponse
     summary="取得目前持股與未實現損益",
     description="回傳目前登入使用者的持股、最近收盤價估值與未實現損益摘要。",
     response_model=PortfolioOverviewResponse,
-    responses=build_common_api_error_responses(include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功回傳目前登入使用者的持股與未實現損益摘要。",
+            "content": {"application/json": {"example": PORTFOLIO_OVERVIEW_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_unauthorized=True),
+    },
 )
 def get_portfolio_positions_api(request: Request) -> PortfolioOverviewResponse:
     try:
@@ -235,7 +365,13 @@ def get_portfolio_positions_api(request: Request) -> PortfolioOverviewResponse:
         "回傳目前登入使用者的整體投資組合摘要，包含現金、持股市值、已實現損益、未實現損益與總資產估值。"
     ),
     response_model=PortfolioSummaryResponse,
-    responses=build_common_api_error_responses(include_unauthorized=True),
+    responses={
+        200: {
+            "description": "成功回傳目前登入使用者的投資組合摘要。",
+            "content": {"application/json": {"example": PORTFOLIO_SUMMARY_RESPONSE_EXAMPLE}},
+        },
+        **build_common_api_error_responses(include_unauthorized=True),
+    },
 )
 def get_portfolio_summary_api(request: Request) -> PortfolioSummaryResponse:
     try:

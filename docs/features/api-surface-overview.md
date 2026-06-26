@@ -105,6 +105,13 @@
 - OpenAPI JSON：`/openapi.json`
 - 健康檢查：`/health`
 
+目前文件補強重點：
+
+1. 核心 `/api/*` 端點已補成功 response example
+2. 主要錯誤回應已補 example error response
+3. `POST /api/watchlist/items` 已補 request body example
+4. 主要 schema 欄位已補 description，方便面試展示與交接閱讀
+
 ## 6. 本輪限制
 
 1. 本輪沒有重寫既有商業邏輯

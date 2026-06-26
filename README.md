@@ -150,6 +150,14 @@ docker compose up --build
 - 頁面型路由：回傳 HTML，包含首頁、個股研究頁、收藏頁、交易紀錄頁與持股頁
 - 資料型 API：集中在 `/api/*`，回傳 JSON，方便用 Swagger / OpenAPI 檢視
 
+目前 Swagger / OpenAPI 已補強的文件內容包含：
+
+- 核心成功 response example
+- 常見錯誤 response example
+- 寫入型 JSON API 的 request body example
+- 主要欄位 description
+- 受保護 API 的 `401 UNAUTHORIZED` 錯誤範例
+
 目前主要資料型 API 包含：
 
 - `/api/stocks/{stock_no}`：查詢單一股票歷史資料與 MA5 / MA20
