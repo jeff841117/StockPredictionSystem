@@ -27,7 +27,7 @@
 - 技術指標只提供 MA5 / MA20
 - 交易只支援最小 BUY / SELL 流程，不含手續費、交易稅、零股與當沖規則
 - 已具備最小登入與資料隔離，但尚未有完整權限系統、角色模型與更細緻的授權控管
-- 無資料庫進階遷移機制，使用本機 SQLite
+- 目前仍未導入正式 migration framework，資料庫升級策略以 SQLite 最小重建 / 搬移規格為主
 - 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
 
 ## 執行環境
@@ -441,6 +441,7 @@ tests/
 - [docs/features/main-platform-track-progress.md](docs/features/main-platform-track-progress.md)
 - [docs/features/daily-use-track-progress.md](docs/features/daily-use-track-progress.md)
 - [docs/features/console-progress-overview.md](docs/features/console-progress-overview.md)
+- [docs/features/data-isolation-migration-spec.md](docs/features/data-isolation-migration-spec.md)
 
 ## 尚未完成項目
 
