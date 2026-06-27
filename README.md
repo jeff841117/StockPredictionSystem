@@ -61,6 +61,7 @@ STOCK_QUERY_DATE=20240501
 INITIAL_VIRTUAL_CASH=1000000
 WATCHLIST_DB_PATH=data/watchlist.db
 SESSION_SECRET=change-me-for-production
+ERROR_LOG_PATH=data/app-errors.log
 ```
 
 說明：
@@ -70,6 +71,7 @@ SESSION_SECRET=change-me-for-production
 - `INITIAL_VIRTUAL_CASH`：模擬交易起始虛擬資金
 - `WATCHLIST_DB_PATH`：SQLite 資料庫位置，預設為 `data/watchlist.db`
 - `SESSION_SECRET`：session / cookie 簽章密鑰，正式展示環境請自行更換
+- `ERROR_LOG_PATH`：最小錯誤記錄檔位置，預設為 `data/app-errors.log`
 
 ## 資料庫 migration 最小方案
 
@@ -194,6 +196,38 @@ docker compose up --build
 - 日期格式錯誤
 - 整數 / 數值 / 文字型別不符
 - 其他未知驗證錯誤的安全 fallback
+
+## 錯誤處理與最小監控
+
+目前專案已補上最小可展示的錯誤分類與記錄策略，目標是讓面試展示時可清楚說明「錯誤從哪裡來、前端看到什麼、系統內部記了什麼」。
+
+主要錯誤分類：
+
+- `validation_error`：輸入驗證錯誤，例如缺少欄位、日期格式錯誤、表單數值不合法
+- `business_rule_error`：商業規則錯誤，例如重複加入收藏、虛擬資金不足、持股不足、登入失敗
+- `external_service_error`：外部資料來源失敗，例如 TWSE 查詢異常
+- `not_found`：查無資源或查無符合條件資料
+- `internal_server_error`：未預期伺服器內部錯誤
+
+目前分層原則：
+
+- `/api/*`：回傳統一 JSON error schema，適合 Swagger / OpenAPI 與程式化讀取
+- HTML 頁面流程：維持頁面提示、redirect 或錯誤頁，但額外補上系統內部記錄
+
+錯誤記錄內容至少包含：
+
+- 錯誤分類
+- 發生路由
+- 使用者可見訊息
+- 系統內部訊息
+- HTTP status code
+- 發生時間
+
+目前記錄方式：
+
+- 預設寫入 `data/app-errors.log`
+- 採一行一筆 JSON log，方便人工檢查與後續擴充
+- 目前不包含 Sentry、Datadog、即時告警或完整 metrics dashboard
 
 ## 操作流程
 
@@ -359,6 +393,7 @@ python -m unittest discover -s tests -v
 目前測試涵蓋：
 
 - 股票查詢成功與錯誤情境
+- `/api/*` validation error、外部資料錯誤與內部錯誤記錄
 - 走勢圖與 MA 欄位
 - 收藏清單 CRUD
 - 註冊、登入、登出與受保護頁面

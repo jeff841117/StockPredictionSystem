@@ -120,6 +120,19 @@ class ApiDocsTests(unittest.TestCase):
         self.assertEqual(payload["validation_errors"][0]["field"], "end_date")
         self.assertEqual(payload["validation_errors"][0]["message"], "缺少必要欄位。")
 
+    @patch("app.main.record_error_event")
+    def test_validation_error_is_recorded_for_api_requests(self, mock_record_error_event) -> None:
+        response = self.client.get("/api/stocks/2330", params={"start_date": "2024-05-01"})
+
+        self.assertEqual(response.status_code, 422)
+        mock_record_error_event.assert_called_once()
+        kwargs = mock_record_error_event.call_args.kwargs
+        self.assertEqual(kwargs["flow"], "api")
+        self.assertEqual(kwargs["category"], "validation_error")
+        self.assertEqual(kwargs["route"], "/api/stocks/2330")
+        self.assertEqual(kwargs["status_code"], 422)
+        self.assertEqual(kwargs["user_message"], "API 請求參數驗證失敗，請確認必填欄位與格式。")
+
     def test_validation_issue_messages_are_translated_to_traditional_chinese(self) -> None:
         issues = build_validation_issues(
             [
@@ -160,6 +173,47 @@ class ApiDocsTests(unittest.TestCase):
                 "validation_errors": [],
             },
         )
+
+    @patch("app.main.record_error_event")
+    @patch("app.routers.api.fetch_stock_detail")
+    def test_external_service_error_is_recorded_for_api_requests(self, mock_fetch, mock_record_error_event) -> None:
+        from app.services.stock_service import ExternalServiceError
+
+        mock_fetch.side_effect = ExternalServiceError("股票資料來源暫時無法使用，請稍後再試。")
+
+        response = self.client.get(
+            "/api/stocks/2330",
+            params={"start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 502)
+        mock_record_error_event.assert_called_once()
+        kwargs = mock_record_error_event.call_args.kwargs
+        self.assertEqual(kwargs["flow"], "api")
+        self.assertEqual(kwargs["category"], "external_service_error")
+        self.assertEqual(kwargs["route"], "/api/stocks/2330")
+        self.assertEqual(kwargs["status_code"], 502)
+        self.assertEqual(kwargs["user_message"], "股票資料來源暫時無法使用，請稍後再試。")
+
+    @patch("app.main.record_error_event")
+    @patch("app.routers.api.fetch_stock_detail")
+    def test_internal_server_error_is_recorded_for_api_requests(self, mock_fetch, mock_record_error_event) -> None:
+        mock_fetch.side_effect = RuntimeError("boom")
+
+        response = self.client.get(
+            "/api/stocks/2330",
+            params={"start_date": "2024-05-01", "end_date": "2024-05-31"},
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["error_code"], "INTERNAL_SERVER_ERROR")
+        mock_record_error_event.assert_called_once()
+        kwargs = mock_record_error_event.call_args.kwargs
+        self.assertEqual(kwargs["flow"], "api")
+        self.assertEqual(kwargs["category"], "internal_server_error")
+        self.assertEqual(kwargs["route"], "/api/stocks/2330")
+        self.assertEqual(kwargs["status_code"], 500)
+        self.assertEqual(kwargs["user_message"], "API 查詢處理失敗，請稍後再試。")
 
 
 if __name__ == "__main__":

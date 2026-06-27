@@ -118,3 +118,37 @@
 2. 本輪沒有把所有表單端點改成 JSON API
 3. 目前 JSON API 以讀取與展示為主，目標是提升平台感與作品集說服力
 4. 本輪只統一 `/api/*` 錯誤格式，未改動 HTML 頁面錯誤提示流程
+
+## 7. 錯誤分類與最小監控補充
+
+目前專案已補上最小錯誤記錄能力，重點是讓 `/api/*` 與 HTML 頁面流程的錯誤邊界更清楚。
+
+### `/api/*`
+
+- 對外：
+  - 維持統一 JSON error schema
+- 對內：
+  - 記錄 `flow=api`
+  - 記錄錯誤分類、路由、使用者訊息、內部訊息、HTTP status code、時間
+
+### HTML 頁面流程
+
+- 對外：
+  - 維持頁面提示、導頁或最小 HTML 錯誤訊息
+- 對內：
+  - 對股票查詢、收藏、交易、登入 / 註冊等常見錯誤補上最小記錄
+
+### 目前使用的最小錯誤分類
+
+- `validation_error`
+- `business_rule_error`
+- `external_service_error`
+- `not_found`
+- `unauthorized`
+- `internal_server_error`
+
+### 目前限制
+
+1. 目前僅提供本機檔案型 error log，不是完整 observability 平台
+2. 目前不含即時告警、Dashboard、Tracing
+3. 目前以展示與最小維運可讀性為主，後續若要平台化可再銜接外部監控工具

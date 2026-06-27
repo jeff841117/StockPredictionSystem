@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, get_settings
+from app.error_monitoring import record_error_event
 from app.services.auth_service import get_current_user, get_current_username, require_login
 from app.services.watchlist_service import (
     DuplicateWatchlistItemError,
@@ -81,8 +82,26 @@ def add_watchlist_item(
     try:
         add_to_watchlist(stock_no or "", stock_name or "", user.id)
     except DuplicateWatchlistItemError as exc:
+        record_error_event(
+            flow="page",
+            category="business_rule_error",
+            route="/watchlist/add",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_watchlist(request, user.id, error_message=str(exc), status_code=status.HTTP_400_BAD_REQUEST)
     except InvalidWatchlistItemError as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error",
+            route="/watchlist/add",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_watchlist(request, user.id, error_message=str(exc), status_code=status.HTTP_400_BAD_REQUEST)
 
     return RedirectResponse(url="/watchlist?message=已成功加入收藏清單。", status_code=status.HTTP_303_SEE_OTHER)
@@ -107,8 +126,26 @@ def remove_watchlist_item(
     try:
         remove_from_watchlist(stock_no or "", user.id)
     except InvalidWatchlistItemError as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error",
+            route="/watchlist/remove",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_watchlist(request, user.id, error_message=str(exc), status_code=status.HTTP_400_BAD_REQUEST)
     except WatchlistItemNotFoundError as exc:
+        record_error_event(
+            flow="page",
+            category="not_found",
+            route="/watchlist/remove",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_404_NOT_FOUND,
+            request=request,
+        )
         return _render_watchlist(request, user.id, error_message=str(exc), status_code=status.HTTP_404_NOT_FOUND)
 
     return RedirectResponse(url="/watchlist?message=已成功移除收藏股票。", status_code=status.HTTP_303_SEE_OTHER)

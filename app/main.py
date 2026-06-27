@@ -3,13 +3,14 @@ from pathlib import Path
 from fastapi import FastAPI, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 
 from app.api_errors import ApiError, build_api_error_content, build_validation_issues
 from app.database import init_database
 from app.config import get_settings
+from app.error_monitoring import record_error_event
 from app.services.auth_service import get_current_username
 from app.routers.auth import router as auth_router
 from app.routers.api import router as api_router
@@ -98,6 +99,15 @@ def _is_api_request_path(path: str) -> bool:
 
 @app.exception_handler(ApiError)
 async def api_error_exception_handler(request, exc: ApiError):
+    record_error_event(
+        flow="api",
+        category=_map_error_code_to_category(exc.error_code),
+        route=request.url.path,
+        user_message=exc.message,
+        internal_message=f"{exc.error_code}: {exc.message}",
+        status_code=exc.status_code,
+        request=request,
+    )
     return JSONResponse(status_code=exc.status_code, content=exc.to_response().model_dump())
 
 
@@ -106,6 +116,15 @@ async def api_request_validation_exception_handler(request, exc: RequestValidati
     if not _is_api_request_path(request.url.path):
         return await request_validation_exception_handler(request, exc)
 
+    record_error_event(
+        flow="api",
+        category="validation_error",
+        route=request.url.path,
+        user_message="API 請求參數驗證失敗，請確認必填欄位與格式。",
+        internal_message=str(exc.errors()),
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        request=request,
+    )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=build_api_error_content(
@@ -123,10 +142,67 @@ async def api_http_exception_handler(request, exc: StarletteHTTPException):
 
     error_code = "NOT_FOUND" if exc.status_code == status.HTTP_404_NOT_FOUND else "HTTP_ERROR"
     message = exc.detail if isinstance(exc.detail, str) else "API 請求失敗。"
+    record_error_event(
+        flow="api",
+        category="not_found" if exc.status_code == status.HTTP_404_NOT_FOUND else "http_error",
+        route=request.url.path,
+        user_message=message,
+        internal_message=f"HTTP {exc.status_code}: {message}",
+        status_code=exc.status_code,
+        request=request,
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content=build_api_error_content(error_code, message),
     )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc: Exception):
+    if _is_api_request_path(request.url.path):
+        record_error_event(
+            flow="api",
+            category="internal_server_error",
+            route=request.url.path,
+            user_message="系統發生未預期錯誤，請稍後再試。",
+            internal_message=repr(exc),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            request=request,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=build_api_error_content(
+                "INTERNAL_SERVER_ERROR",
+                "系統發生未預期錯誤，請稍後再試。",
+            ),
+        )
+
+    record_error_event(
+        flow="page",
+        category="internal_server_error",
+        route=request.url.path,
+        user_message="頁面處理時發生未預期錯誤，請稍後再試。",
+        internal_message=repr(exc),
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        request=request,
+    )
+    return HTMLResponse(
+        content="頁面處理時發生未預期錯誤，請稍後再試。",
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
+def _map_error_code_to_category(error_code: str) -> str:
+    mapping = {
+        "VALIDATION_ERROR": "validation_error",
+        "INVALID_INPUT": "business_rule_error",
+        "DUPLICATE_RESOURCE": "business_rule_error",
+        "NOT_FOUND": "not_found",
+        "EXTERNAL_SERVICE_ERROR": "external_service_error",
+        "UNAUTHORIZED": "unauthorized",
+        "INTERNAL_SERVER_ERROR": "internal_server_error",
+    }
+    return mapping.get(error_code, "api_error")
 
 
 @app.get(

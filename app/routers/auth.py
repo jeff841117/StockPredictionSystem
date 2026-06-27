@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
+from app.error_monitoring import record_error_event
 from app.services.auth_service import (
     DuplicateUserError,
     InvalidCredentialsError,
@@ -40,7 +41,7 @@ def _render_auth_page(
             "success_message": success_message,
             "next_path": next_path,
             "current_username": get_current_username(request),
-            "single_user_scope_notice": "目前登入版只提供登入狀態與頁面保護，尚未做收藏與交易資料隔離。",
+            "single_user_scope_notice": "目前登入版已提供登入狀態、頁面保護與最小資料隔離，收藏與交易資料會依登入使用者區分。",
         },
         status_code=status_code,
     )
@@ -68,6 +69,15 @@ def login_submit(
     try:
         user = authenticate_user(username or "", password or "")
     except InvalidCredentialsError as exc:
+        record_error_event(
+            flow="page",
+            category="business_rule_error",
+            route="/auth/login",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_auth_page(
             request,
             name="login.html",
@@ -97,6 +107,15 @@ def register_submit(
     try:
         register_user(username or "", password or "")
     except (InvalidRegistrationInputError, DuplicateUserError) as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error" if isinstance(exc, InvalidRegistrationInputError) else "business_rule_error",
+            route="/auth/register",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_auth_page(
             request,
             name="register.html",

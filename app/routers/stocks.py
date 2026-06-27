@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, get_settings
+from app.error_monitoring import record_error_event
 from app.services.auth_service import get_current_user
 from app.services.stock_service import (
     ExternalServiceError,
@@ -100,12 +101,48 @@ def search_stock(
     try:
         result = fetch_stock_detail(stock_no, start_date, end_date)
     except InvalidStockCodeError as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error",
+            route=request.url.path,
+            user_message=str(exc),
+            internal_message=str(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_error(request, stock_no, start_date, end_date, str(exc), status.HTTP_400_BAD_REQUEST)
     except InvalidDateRangeError as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error",
+            route=request.url.path,
+            user_message=str(exc),
+            internal_message=str(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         return _render_error(request, stock_no, start_date, end_date, str(exc), status.HTTP_400_BAD_REQUEST)
     except StockNotFoundError as exc:
+        record_error_event(
+            flow="page",
+            category="not_found",
+            route=request.url.path,
+            user_message=str(exc),
+            internal_message=str(exc),
+            status_code=status.HTTP_404_NOT_FOUND,
+            request=request,
+        )
         return _render_error(request, stock_no, start_date, end_date, str(exc), status.HTTP_404_NOT_FOUND)
     except ExternalServiceError as exc:
+        record_error_event(
+            flow="page",
+            category="external_service_error",
+            route=request.url.path,
+            user_message=str(exc),
+            internal_message=str(exc),
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            request=request,
+        )
         return _render_error(request, stock_no, start_date, end_date, str(exc), status.HTTP_502_BAD_GATEWAY)
 
     current_user = get_current_user(request)

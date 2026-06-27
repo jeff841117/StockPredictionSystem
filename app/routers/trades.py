@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, get_settings
+from app.error_monitoring import record_error_event
 from app.services.auth_service import get_current_user, get_current_username, require_login
 from app.services.trade_service import (
     InsufficientHoldingsError,
@@ -129,6 +130,15 @@ def buy_trade(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     except (InvalidTradeInputError, InsufficientFundsError) as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error" if isinstance(exc, InvalidTradeInputError) else "business_rule_error",
+            route="/trades/buy",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         query = urlencode({**base_params, "trade_error_message": str(exc)})
         return RedirectResponse(
             url=f"/stocks/search?{query}",
@@ -170,6 +180,15 @@ def sell_trade(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     except (InvalidTradeInputError, InsufficientHoldingsError) as exc:
+        record_error_event(
+            flow="page",
+            category="validation_error" if isinstance(exc, InvalidTradeInputError) else "business_rule_error",
+            route="/trades/sell",
+            user_message=str(exc),
+            internal_message=repr(exc),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            request=request,
+        )
         query = urlencode({"trade_error_message": str(exc)})
         return RedirectResponse(
             url=f"/trades/portfolio?{query}",
