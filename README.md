@@ -367,6 +367,36 @@ python -m unittest discover -s tests -v
 - 交易紀錄排序
 - 持股總覽、已實現損益、未實現損益與投資組合摘要
 
+## CI 測試流程
+
+目前專案已提供最小 GitHub Actions CI workflow：
+
+1. `checkout`
+2. Python 3.11 環境準備
+3. 安裝 `requirements.txt`
+4. 執行主測試指令：
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+CI 目前會跑：
+
+- 主要 `unittest` 測試流程
+- 不依賴外部即時狀態的核心功能驗證
+
+CI 目前不會跑：
+
+- `RUN_TWSE_SMOKE=1` 的真實 TWSE smoke test
+- Docker build 驗證
+- lint / format / type-check 額外品質閘
+
+這樣分層的原因是：
+
+1. 先讓主 CI 保持穩定
+2. 避免外部資料波動導致 CI 假失敗
+3. 先把作品集最核心的測試自動化展示建立起來，再逐步擴充
+
 ## Docker / Deployment 補充
 
 目前 `main` 主線已補最小 Docker 與部署文件，適合用於：

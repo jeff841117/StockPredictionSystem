@@ -88,6 +88,12 @@
 python -m unittest discover -s tests -v
 ```
 
+CI 對應：
+
+1. GitHub Actions 主 workflow 目前也會執行同一條指令
+2. 目標是先驗證核心 `unittest` 流程
+3. 真實 TWSE smoke test 不納入主 CI，避免外部資料波動影響穩定性
+
 ## 文件同步原則
 
 每完成一輪功能，應視需要同步更新：
