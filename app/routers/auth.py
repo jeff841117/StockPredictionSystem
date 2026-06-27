@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.error_monitoring import record_error_event
+from app.services.audit_service import record_audit_event
 from app.services.auth_service import (
     DuplicateUserError,
     InvalidCredentialsError,
@@ -88,6 +89,13 @@ def login_submit(
 
     response = RedirectResponse(url=sanitize_next_path(next_path), status_code=status.HTTP_303_SEE_OTHER)
     login_user(response, user.username)
+    record_audit_event(
+        event_type="AUTH_LOGIN",
+        username=user.username,
+        user_id=user.id,
+        target_type="session",
+        target_value=sanitize_next_path(next_path),
+    )
     return response
 
 
@@ -105,7 +113,7 @@ def register_submit(
     password: str | None = Form(None),
 ):
     try:
-        register_user(username or "", password or "")
+        user = register_user(username or "", password or "")
     except (InvalidRegistrationInputError, DuplicateUserError) as exc:
         record_error_event(
             flow="page",
@@ -123,6 +131,13 @@ def register_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
+    record_audit_event(
+        event_type="AUTH_REGISTER",
+        username=user.username,
+        user_id=user.id,
+        target_type="user",
+        target_value=user.username,
+    )
     return RedirectResponse(
         url="/auth/login?message=註冊成功，請使用新帳號登入。",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -131,6 +146,14 @@ def register_submit(
 
 @router.get("/logout", tags=["Pages"], summary="登出")
 def logout(request: Request):
+    current_username = get_current_username(request)
     response = RedirectResponse(url="/?message=已成功登出。", status_code=status.HTTP_303_SEE_OTHER)
     logout_user(response)
+    if current_username is not None:
+        record_audit_event(
+            event_type="AUTH_LOGOUT",
+            username=current_username,
+            target_type="session",
+            target_value="/",
+        )
     return response

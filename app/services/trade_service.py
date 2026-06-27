@@ -12,6 +12,8 @@ from app.models.trade import (
     UnrealizedPnlSummary,
     VirtualCashSummary,
 )
+from app.services.audit_service import record_audit_event
+from app.services.auth_service import get_user_by_id
 from app.services.stock_service import StockServiceError, get_latest_close_price
 
 
@@ -259,6 +261,23 @@ def create_buy_trade(
         )
         connection.commit()
 
+    user = get_user_by_id(user_id, db_path)
+    if user is not None:
+        record_audit_event(
+            event_type="TRADE_BUY",
+            username=user.username,
+            user_id=user.id,
+            target_type="stock",
+            target_value=normalized_stock_no,
+            context={
+                "stock_name": normalized_stock_name,
+                "price": _format_storage_amount(price),
+                "quantity": quantity,
+                "trade_time": trade_time.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            db_path=db_path,
+        )
+
     return TradeRecord(
         id=cursor.lastrowid,
         stock_no=normalized_stock_no,
@@ -336,6 +355,23 @@ def create_sell_trade(
             ),
         )
         connection.commit()
+
+    user = get_user_by_id(user_id, db_path)
+    if user is not None:
+        record_audit_event(
+            event_type="TRADE_SELL",
+            username=user.username,
+            user_id=user.id,
+            target_type="stock",
+            target_value=normalized_stock_no,
+            context={
+                "stock_name": normalized_stock_name,
+                "price": _format_storage_amount(price),
+                "quantity": quantity,
+                "trade_time": trade_time.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            db_path=db_path,
+        )
 
     return TradeRecord(
         id=cursor.lastrowid,

@@ -33,13 +33,19 @@ class DatabaseMigrationTests(unittest.TestCase):
             trades_columns = {
                 row["name"] for row in connection.execute("PRAGMA table_info(trades)").fetchall()
             }
+            audit_logs_columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(audit_logs)").fetchall()
+            }
 
         self.assertIn("schema_meta", tables)
         self.assertIn("users", tables)
         self.assertIn("watchlist", tables)
         self.assertIn("trades", tables)
+        self.assertIn("audit_logs", tables)
         self.assertIn("user_id", watchlist_columns)
         self.assertIn("user_id", trades_columns)
+        self.assertIn("event_type", audit_logs_columns)
+        self.assertIn("username", audit_logs_columns)
         self.assertEqual(get_schema_version(self.db_path), CURRENT_SCHEMA_VERSION)
 
     def test_init_database_upgrades_legacy_database_and_preserves_rows(self) -> None:
@@ -104,6 +110,7 @@ class DatabaseMigrationTests(unittest.TestCase):
             trade_row = connection.execute(
                 "SELECT user_id, stock_no, trade_type FROM trades"
             ).fetchone()
+            audit_log_count = connection.execute("SELECT COUNT(*) AS row_count FROM audit_logs").fetchone()["row_count"]
             legacy_tables = {
                 row["name"]
                 for row in connection.execute(
@@ -115,6 +122,7 @@ class DatabaseMigrationTests(unittest.TestCase):
         self.assertEqual(watchlist_row["stock_no"], "2330")
         self.assertEqual(trade_row["user_id"], 1)
         self.assertEqual(trade_row["trade_type"], "BUY")
+        self.assertEqual(audit_log_count, 0)
         self.assertFalse(legacy_tables)
         self.assertEqual(get_schema_version(self.db_path), CURRENT_SCHEMA_VERSION)
 

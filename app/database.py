@@ -8,7 +8,8 @@ from app.config import get_settings
 settings = get_settings()
 SCHEMA_VERSION_KEY = "schema_version"
 LEGACY_SCHEMA_VERSION = 1
-CURRENT_SCHEMA_VERSION = 2
+USER_SCOPED_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 class DatabaseMigrationError(RuntimeError):
@@ -43,8 +44,11 @@ def get_schema_version(db_path: str | None = None) -> int:
 
 def _apply_migrations(connection: sqlite3.Connection, current_version: int) -> None:
     next_version = current_version
-    if next_version < CURRENT_SCHEMA_VERSION:
+    if next_version < USER_SCOPED_SCHEMA_VERSION:
         _migrate_to_v2(connection)
+        next_version = USER_SCOPED_SCHEMA_VERSION
+    if next_version < CURRENT_SCHEMA_VERSION:
+        _migrate_to_v3(connection)
         next_version = CURRENT_SCHEMA_VERSION
     _set_schema_version(connection, next_version)
 
@@ -55,10 +59,15 @@ def _migrate_to_v2(connection: sqlite3.Connection) -> None:
     _ensure_trades_table(connection)
 
 
+def _migrate_to_v3(connection: sqlite3.Connection) -> None:
+    _create_audit_logs_table(connection)
+
+
 def _create_current_schema(connection: sqlite3.Connection) -> None:
     _create_users_table(connection)
     _create_watchlist_table(connection)
     _create_trades_table(connection)
+    _create_audit_logs_table(connection)
 
 
 def _create_users_table(connection: sqlite3.Connection) -> None:
@@ -103,6 +112,25 @@ def _create_trades_table(connection: sqlite3.Connection) -> None:
             quantity INTEGER NOT NULL,
             trade_time TEXT NOT NULL,
             total_amount TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """
+    )
+
+
+def _create_audit_logs_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            username TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_value TEXT NOT NULL,
+            status TEXT NOT NULL,
+            context TEXT NOT NULL,
+            created_at TEXT NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
         """
@@ -195,8 +223,11 @@ def _detect_schema_version(connection: sqlite3.Connection) -> int:
 
     has_user_scoped_watchlist = _table_exists(connection, "watchlist") and "user_id" in _get_column_names(connection, "watchlist")
     has_user_scoped_trades = _table_exists(connection, "trades") and "user_id" in _get_column_names(connection, "trades")
-    if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades:
+    has_audit_logs = _table_exists(connection, "audit_logs")
+    if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades and has_audit_logs:
         return CURRENT_SCHEMA_VERSION
+    if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades:
+        return USER_SCOPED_SCHEMA_VERSION
 
     return LEGACY_SCHEMA_VERSION
 

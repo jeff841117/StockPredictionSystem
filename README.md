@@ -19,6 +19,7 @@
 - 未實現損益與市值
 - 投資組合摘要
 - 最小登入流程、受保護頁面與最小資料隔離
+- 最小操作日誌（audit log）
 
 ## 目前版本限制
 
@@ -29,6 +30,7 @@
 - 已具備最小登入與資料隔離，但尚未有完整權限系統、角色模型與更細緻的授權控管
 - 目前已具備最小 SQLite migration 與 schema version 機制，但仍未導入正式 migration framework
 - 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
+- audit log 目前僅提供最小資料層記錄，尚未提供查詢頁、篩選、匯出與告警能力
 
 ## 執行環境
 
@@ -229,6 +231,37 @@ docker compose up --build
 - 採一行一筆 JSON log，方便人工檢查與後續擴充
 - 目前不包含 Sentry、Datadog、即時告警或完整 metrics dashboard
 
+## 操作日誌 / Audit Log
+
+目前專案已補上最小可展示的 audit log 機制，重點是呈現「誰在什麼時間做了什麼重要操作」。
+
+目前會記錄的核心事件：
+
+- 使用者註冊
+- 登入成功
+- 登出
+- 加入收藏
+- 移除收藏
+- BUY
+- SELL
+
+每筆 audit log 目前至少包含：
+
+- `event_type`
+- `username`
+- `created_at`
+- `target_type`
+- `target_value`
+- `status`
+- `context`
+
+目前定位與限制：
+
+- 先以 SQLite `audit_logs` 資料表保存
+- 不記錄明碼密碼與不必要的完整敏感 payload
+- 目前沒有 UI、篩選、匯出、告警或外部 SIEM 整合
+- 目前主要作為展示與測試可驗證的最小平台能力
+
 ## 操作流程
 
 ### 1. 股票查詢
@@ -397,6 +430,7 @@ python -m unittest discover -s tests -v
 - 走勢圖與 MA 欄位
 - 收藏清單 CRUD
 - 註冊、登入、登出與受保護頁面
+- 操作日誌（註冊 / 登入 / 登出 / 收藏 / BUY / SELL）
 - 多使用者資料隔離
 - BUY / SELL 驗證與資金檢查
 - 交易紀錄排序

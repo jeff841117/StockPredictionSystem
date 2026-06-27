@@ -4,6 +4,8 @@ import sqlite3
 
 from app.database import get_connection, init_database
 from app.models.watchlist import WatchlistItem
+from app.services.audit_service import record_audit_event
+from app.services.auth_service import get_user_by_id
 
 
 class WatchlistServiceError(Exception):
@@ -39,6 +41,18 @@ def add_to_watchlist(stock_no: str, stock_name: str, user_id: int, db_path: str 
             connection.commit()
     except sqlite3.IntegrityError as exc:
         raise DuplicateWatchlistItemError("該股票已在收藏清單中，無法重複加入。") from exc
+
+    user = get_user_by_id(user_id, db_path)
+    if user is not None:
+        record_audit_event(
+            event_type="WATCHLIST_ADD",
+            username=user.username,
+            user_id=user.id,
+            target_type="stock",
+            target_value=normalized_stock_no,
+            context={"stock_name": normalized_stock_name},
+            db_path=db_path,
+        )
 
     return WatchlistItem(
         stock_no=normalized_stock_no,
@@ -86,3 +100,14 @@ def remove_from_watchlist(stock_no: str, user_id: int, db_path: str | None = Non
         connection.commit()
     if cursor.rowcount == 0:
         raise WatchlistItemNotFoundError("找不到要移除的收藏股票。")
+
+    user = get_user_by_id(user_id, db_path)
+    if user is not None:
+        record_audit_event(
+            event_type="WATCHLIST_REMOVE",
+            username=user.username,
+            user_id=user.id,
+            target_type="stock",
+            target_value=normalized_stock_no,
+            db_path=db_path,
+        )
