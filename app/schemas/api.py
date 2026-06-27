@@ -76,6 +76,30 @@ class ApiMessageResponse(BaseModel):
     model_config = {"json_schema_extra": {"example": {"message": "已成功移除收藏股票。"}}}
 
 
+class AuditLogResponse(BaseModel):
+    event_type: str = Field(description="操作事件類型，例如 `AUTH_LOGIN`。")
+    username: str = Field(description="觸發事件的使用者帳號。")
+    created_at: str = Field(description="事件發生時間，格式為 `YYYY-MM-DD HH:MM:SS`。")
+    target_type: str = Field(description="目標資源類型，例如 `stock`、`session`、`user`。")
+    target_value: str = Field(description="目標資源值，例如股票代號或頁面路徑。")
+    status: str = Field(description="事件結果狀態，目前最小版主要為 `success`。")
+    context: str = Field(description="最小上下文資訊，使用 JSON 字串保存。")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "event_type": "TRADE_BUY",
+                "username": "demo_user",
+                "created_at": "2024-05-31 09:00:00",
+                "target_type": "stock",
+                "target_value": "2330",
+                "status": "success",
+                "context": "{\"price\": \"800.00\", \"quantity\": 100, \"stock_name\": \"台積電\", \"trade_time\": \"2024-05-31 09:00:00\"}",
+            }
+        }
+    }
+
+
 class TradeRecordResponse(BaseModel):
     id: int = Field(description="交易紀錄主鍵。")
     stock_no: str = Field(description="台股代號。")

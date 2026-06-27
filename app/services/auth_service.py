@@ -30,6 +30,10 @@ class InvalidCredentialsError(AuthServiceError):
     """Raised when login credentials are invalid."""
 
 
+class PermissionDeniedError(AuthServiceError):
+    """Raised when the current user lacks required role."""
+
+
 SESSION_USER_KEY = "auth_username"
 AUTH_COOKIE_NAME = "auth_session"
 settings = get_settings()
@@ -52,7 +56,7 @@ def register_user(username: str, password: str, db_path: str | None = None) -> U
     try:
         with closing(get_connection(db_path)) as connection:
             cursor = connection.execute(
-                "INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
+                "INSERT INTO users (username, role, password_hash, created_at) VALUES (?, 'user', ?, ?)",
                 (normalized_username, password_hash, created_at),
             )
             connection.commit()
@@ -62,6 +66,7 @@ def register_user(username: str, password: str, db_path: str | None = None) -> U
     return UserRecord(
         id=cursor.lastrowid,
         username=normalized_username,
+        role="user",
         password_hash=password_hash,
         created_at=created_at,
     )
@@ -82,7 +87,7 @@ def get_user_by_username(username: str, db_path: str | None = None) -> UserRecor
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         row = connection.execute(
-            "SELECT id, username, password_hash, created_at FROM users WHERE username = ?",
+            "SELECT id, username, role, password_hash, created_at FROM users WHERE username = ?",
             (username.strip(),),
         ).fetchone()
     if row is None:
@@ -90,6 +95,7 @@ def get_user_by_username(username: str, db_path: str | None = None) -> UserRecor
     return UserRecord(
         id=row["id"],
         username=row["username"],
+        role=row["role"],
         password_hash=row["password_hash"],
         created_at=row["created_at"],
     )
@@ -102,7 +108,7 @@ def get_user_by_id(user_id: int | None, db_path: str | None = None) -> UserRecor
     init_database(db_path)
     with closing(get_connection(db_path)) as connection:
         row = connection.execute(
-            "SELECT id, username, password_hash, created_at FROM users WHERE id = ?",
+            "SELECT id, username, role, password_hash, created_at FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
     if row is None:
@@ -110,6 +116,7 @@ def get_user_by_id(user_id: int | None, db_path: str | None = None) -> UserRecor
     return UserRecord(
         id=row["id"],
         username=row["username"],
+        role=row["role"],
         password_hash=row["password_hash"],
         created_at=row["created_at"],
     )
@@ -134,6 +141,13 @@ def get_current_username(request: Request) -> str | None:
     if not hmac.compare_digest(signature, expected_signature):
         return None
     return username or None
+
+
+def get_current_user_role(request: Request, db_path: str | None = None) -> str | None:
+    user = get_current_user(request, db_path)
+    if user is None:
+        return None
+    return user.role
 
 
 def login_user(response: Response, username: str) -> None:
@@ -161,6 +175,15 @@ def require_login(request: Request, next_path: str | None = None) -> RedirectRes
         url=f"/auth/login?{urlencode({'next': target})}",
         status_code=303,
     )
+
+
+def require_role(request: Request, required_role: str, db_path: str | None = None) -> UserRecord:
+    user = get_current_user(request, db_path)
+    if user is None:
+        raise PermissionDeniedError("UNAUTHENTICATED")
+    if user.role != required_role:
+        raise PermissionDeniedError("FORBIDDEN")
+    return user
 
 
 def sanitize_next_path(next_path: str | None) -> str:

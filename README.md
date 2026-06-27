@@ -20,6 +20,7 @@
 - 投資組合摘要
 - 最小登入流程、受保護頁面與最小資料隔離
 - 最小操作日誌（audit log）
+- 最小角色權限管理（`admin` / `user`）
 
 ## 目前版本限制
 
@@ -31,6 +32,7 @@
 - 目前已具備最小 SQLite migration 與 schema version 機制，但仍未導入正式 migration framework
 - 已具備最小 Docker / deployment 文件，但目前因本機缺少可用 Docker 環境，尚未完成 Docker 實機驗證
 - audit log 目前僅提供最小資料層記錄，尚未提供查詢頁、篩選、匯出與告警能力
+- 權限管理目前僅提供最小 `admin / user` 角色區分，尚未進入完整 RBAC 或權限編輯流程
 
 ## 執行環境
 
@@ -338,6 +340,18 @@ docker compose up --build
 - 密碼以雜湊形式儲存，不以明碼保存
 - 使用 session / cookie 維持登入狀態
 - 目前先保護收藏清單、交易紀錄與持股總覽頁
+
+### 最小角色權限管理
+
+- 目前角色只區分 `admin` 與 `user`
+- 新註冊帳號預設為 `user`
+- `user` 可使用自己的收藏、交易、持股與投資組合資料
+- `admin` 目前額外可存取：
+  - `/admin/audit-logs`
+  - `/api/admin/audit-logs`
+- 未登入與已登入但無權限會分開處理：
+  - HTML 頁面：未登入導向登入頁，無權限回 `403` 頁面提示
+  - `/api/*`：未登入回 `401 UNAUTHORIZED`，權限不足回 `403 FORBIDDEN`
 
 ### 最小資料隔離
 

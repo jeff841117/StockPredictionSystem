@@ -32,6 +32,9 @@
                 <a class="{% if request.url.path.startswith('/watchlist') %}active{% endif %}" href="{{ url_for('watchlist_page') }}">收藏清單</a>
                 <a class="{% if request.url.path == '/trades' %}active{% endif %}" href="{{ url_for('trades_page') }}">交易紀錄</a>
                 <a class="{% if request.url.path.startswith('/trades/portfolio') %}active{% endif %}" href="{{ url_for('portfolio_page') }}">持股總覽</a>
+                {% if request.state.current_user_role == 'admin' %}
+                <a class="{% if request.url.path.startswith('/admin/audit-logs') %}active{% endif %}" href="{{ url_for('audit_logs_page') }}">Admin Audit</a>
+                {% endif %}
             </nav>
         </div>
     </header>

@@ -33,6 +33,7 @@ class ApiDocsTests(unittest.TestCase):
         self.assertIn("/api/watchlist/items", payload["paths"])
         self.assertIn("/api/trades/history", payload["paths"])
         self.assertIn("/api/portfolio/summary", payload["paths"])
+        self.assertIn("/api/admin/audit-logs", payload["paths"])
 
         tag_names = {tag["name"] for tag in payload["tags"]}
         self.assertIn("Pages", tag_names)
@@ -81,6 +82,13 @@ class ApiDocsTests(unittest.TestCase):
         self.assertEqual(
             watchlist_post_api["requestBody"]["content"]["application/json"]["schema"]["$ref"],
             "#/components/schemas/WatchlistCreateRequest",
+        )
+        admin_audit_api = payload["paths"]["/api/admin/audit-logs"]["get"]
+        self.assertIn("401", admin_audit_api["responses"])
+        self.assertIn("403", admin_audit_api["responses"])
+        self.assertEqual(
+            admin_audit_api["responses"]["403"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/ApiErrorResponse",
         )
 
     def test_openapi_schema_contains_examples_for_core_api_components(self) -> None:

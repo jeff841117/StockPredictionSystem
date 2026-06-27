@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, Request, status
 
 from app.api_errors import ApiError, build_common_api_error_responses
 from app.schemas.api import (
+    AuditLogResponse,
     ApiMessageResponse,
     PortfolioOverviewResponse,
     PortfolioSummaryResponse,
@@ -13,7 +14,8 @@ from app.schemas.api import (
     WatchlistItemResponse,
 )
 from app.schemas.stock import StockLookupResult
-from app.services.auth_service import get_current_user
+from app.services.audit_service import list_audit_logs
+from app.services.auth_service import PermissionDeniedError, get_current_user, require_role
 from app.services.stock_service import (
     ExternalServiceError,
     InvalidDateRangeError,
@@ -124,6 +126,23 @@ def _require_api_user(request: Request) -> int:
             "請先登入後再存取這個 API。",
         )
     return user.id
+
+
+def _require_api_admin(request: Request) -> None:
+    try:
+        require_role(request, "admin")
+    except PermissionDeniedError as exc:
+        if str(exc) == "UNAUTHENTICATED":
+            raise ApiError(
+                status.HTTP_401_UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "請先登入後再存取這個 API。",
+            ) from exc
+        raise ApiError(
+            status.HTTP_403_FORBIDDEN,
+            "FORBIDDEN",
+            "你目前沒有權限存取這個 API。",
+        ) from exc
 
 
 @router.get(
@@ -384,4 +403,57 @@ def get_portfolio_summary_api(request: Request) -> PortfolioSummaryResponse:
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",
             "投資組合摘要讀取失敗，請稍後再試。",
+        ) from exc
+
+
+@router.get(
+    "/admin/audit-logs",
+    tags=["System"],
+    summary="取得操作日誌",
+    description="回傳最小 audit log 清單。此端點目前僅限 admin 存取，用於展示最小角色權限管理。",
+    response_model=list[AuditLogResponse],
+    responses={
+        200: {
+            "description": "成功回傳 audit log 清單。",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "event_type": "AUTH_LOGIN",
+                            "username": "admin_user",
+                            "created_at": "2024-05-31 09:00:00",
+                            "target_type": "session",
+                            "target_value": "/admin/audit-logs",
+                            "status": "success",
+                            "context": "{}",
+                        }
+                    ]
+                }
+            },
+        },
+        **build_common_api_error_responses(include_unauthorized=True, include_forbidden=True),
+    },
+)
+def get_admin_audit_logs_api(request: Request) -> list[AuditLogResponse]:
+    try:
+        _require_api_admin(request)
+        return [
+            AuditLogResponse(
+                event_type=item.event_type,
+                username=item.username,
+                created_at=item.created_at,
+                target_type=item.target_type,
+                target_value=item.target_value,
+                status=item.status,
+                context=item.context,
+            )
+            for item in list_audit_logs()
+        ]
+    except ApiError:
+        raise
+    except Exception as exc:
+        raise ApiError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "操作日誌讀取失敗，請稍後再試。",
         ) from exc

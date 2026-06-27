@@ -43,6 +43,7 @@ def build_common_api_error_responses(
     include_external_failure: bool = False,
     include_conflict: bool = False,
     include_unauthorized: bool = False,
+    include_forbidden: bool = False,
 ) -> dict[int, dict]:
     responses = {
         status.HTTP_400_BAD_REQUEST: {
@@ -173,6 +174,25 @@ def build_common_api_error_responses(
                             "value": build_api_error_content(
                                 "UNAUTHORIZED",
                                 "請先登入後再存取這個 API。",
+                            ),
+                        }
+                    }
+                }
+            },
+        }
+
+    if include_forbidden:
+        responses[status.HTTP_403_FORBIDDEN] = {
+            "model": ApiErrorResponse,
+            "description": "已登入但沒有足夠權限存取此 API。",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "forbidden": {
+                            "summary": "權限不足",
+                            "value": build_api_error_content(
+                                "FORBIDDEN",
+                                "你目前沒有權限存取這個 API。",
                             ),
                         }
                     }

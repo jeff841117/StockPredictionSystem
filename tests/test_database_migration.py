@@ -27,6 +27,9 @@ class DatabaseMigrationTests(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 ).fetchall()
             }
+            users_columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(users)").fetchall()
+            }
             watchlist_columns = {
                 row["name"] for row in connection.execute("PRAGMA table_info(watchlist)").fetchall()
             }
@@ -42,6 +45,7 @@ class DatabaseMigrationTests(unittest.TestCase):
         self.assertIn("watchlist", tables)
         self.assertIn("trades", tables)
         self.assertIn("audit_logs", tables)
+        self.assertIn("role", users_columns)
         self.assertIn("user_id", watchlist_columns)
         self.assertIn("user_id", trades_columns)
         self.assertIn("event_type", audit_logs_columns)
@@ -110,6 +114,7 @@ class DatabaseMigrationTests(unittest.TestCase):
             trade_row = connection.execute(
                 "SELECT user_id, stock_no, trade_type FROM trades"
             ).fetchone()
+            role_row = connection.execute("SELECT role FROM users WHERE id = 1").fetchone()
             audit_log_count = connection.execute("SELECT COUNT(*) AS row_count FROM audit_logs").fetchone()["row_count"]
             legacy_tables = {
                 row["name"]
@@ -122,6 +127,7 @@ class DatabaseMigrationTests(unittest.TestCase):
         self.assertEqual(watchlist_row["stock_no"], "2330")
         self.assertEqual(trade_row["user_id"], 1)
         self.assertEqual(trade_row["trade_type"], "BUY")
+        self.assertEqual(role_row["role"], "user")
         self.assertEqual(audit_log_count, 0)
         self.assertFalse(legacy_tables)
         self.assertEqual(get_schema_version(self.db_path), CURRENT_SCHEMA_VERSION)

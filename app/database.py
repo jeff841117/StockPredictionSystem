@@ -9,7 +9,8 @@ settings = get_settings()
 SCHEMA_VERSION_KEY = "schema_version"
 LEGACY_SCHEMA_VERSION = 1
 USER_SCOPED_SCHEMA_VERSION = 2
-CURRENT_SCHEMA_VERSION = 3
+AUDIT_LOG_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 
 class DatabaseMigrationError(RuntimeError):
@@ -47,8 +48,11 @@ def _apply_migrations(connection: sqlite3.Connection, current_version: int) -> N
     if next_version < USER_SCOPED_SCHEMA_VERSION:
         _migrate_to_v2(connection)
         next_version = USER_SCOPED_SCHEMA_VERSION
-    if next_version < CURRENT_SCHEMA_VERSION:
+    if next_version < AUDIT_LOG_SCHEMA_VERSION:
         _migrate_to_v3(connection)
+        next_version = AUDIT_LOG_SCHEMA_VERSION
+    if next_version < CURRENT_SCHEMA_VERSION:
+        _migrate_to_v4(connection)
         next_version = CURRENT_SCHEMA_VERSION
     _set_schema_version(connection, next_version)
 
@@ -61,6 +65,10 @@ def _migrate_to_v2(connection: sqlite3.Connection) -> None:
 
 def _migrate_to_v3(connection: sqlite3.Connection) -> None:
     _create_audit_logs_table(connection)
+
+
+def _migrate_to_v4(connection: sqlite3.Connection) -> None:
+    _ensure_users_table(connection)
 
 
 def _create_current_schema(connection: sqlite3.Connection) -> None:
@@ -76,6 +84,7 @@ def _create_users_table(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
+            role TEXT NOT NULL DEFAULT 'user',
             password_hash TEXT NOT NULL,
             created_at TEXT NOT NULL
         )
@@ -135,6 +144,18 @@ def _create_audit_logs_table(connection: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _ensure_users_table(connection: sqlite3.Connection) -> None:
+    if not _table_exists(connection, "users"):
+        _create_users_table(connection)
+        return
+
+    columns = _get_column_names(connection, "users")
+    if "role" in columns:
+        return
+
+    connection.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
 
 
 def _ensure_watchlist_table(connection: sqlite3.Connection) -> None:
@@ -224,8 +245,17 @@ def _detect_schema_version(connection: sqlite3.Connection) -> int:
     has_user_scoped_watchlist = _table_exists(connection, "watchlist") and "user_id" in _get_column_names(connection, "watchlist")
     has_user_scoped_trades = _table_exists(connection, "trades") and "user_id" in _get_column_names(connection, "trades")
     has_audit_logs = _table_exists(connection, "audit_logs")
-    if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades and has_audit_logs:
+    has_user_roles = _table_exists(connection, "users") and "role" in _get_column_names(connection, "users")
+    if (
+        _table_exists(connection, "users")
+        and has_user_scoped_watchlist
+        and has_user_scoped_trades
+        and has_audit_logs
+        and has_user_roles
+    ):
         return CURRENT_SCHEMA_VERSION
+    if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades and has_audit_logs:
+        return AUDIT_LOG_SCHEMA_VERSION
     if _table_exists(connection, "users") and has_user_scoped_watchlist and has_user_scoped_trades:
         return USER_SCOPED_SCHEMA_VERSION
 

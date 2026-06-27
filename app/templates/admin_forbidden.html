@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}權限不足 | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Access Control</p>
+            <h2>權限不足</h2>
+            <p class="section-copy">你已登入，但目前帳號不是 {{ required_role }}，無法存取這個管理頁面。</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

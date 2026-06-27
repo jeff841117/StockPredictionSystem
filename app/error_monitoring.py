@@ -62,6 +62,6 @@ def record_error_event(
 def _resolve_log_level(category: str, status_code: int) -> int:
     if category in {"internal_server_error", "external_service_error"} or status_code >= 500:
         return logging.ERROR
-    if category in {"validation_error", "business_rule_error", "not_found", "unauthorized"}:
+    if category in {"validation_error", "business_rule_error", "not_found", "unauthorized", "forbidden"}:
         return logging.WARNING
     return logging.INFO

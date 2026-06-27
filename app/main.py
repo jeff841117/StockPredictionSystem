@@ -11,7 +11,8 @@ from app.api_errors import ApiError, build_api_error_content, build_validation_i
 from app.database import init_database
 from app.config import get_settings
 from app.error_monitoring import record_error_event
-from app.services.auth_service import get_current_username
+from app.services.auth_service import get_current_user_role, get_current_username
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.api import router as api_router
 from app.routers.pages import router as pages_router
@@ -79,6 +80,7 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(pages_router)
+app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(stocks_router)
 app.include_router(trades_router)
@@ -90,6 +92,7 @@ init_database()
 @app.middleware("http")
 async def attach_current_user_to_request(request, call_next):
     request.state.current_username = get_current_username(request)
+    request.state.current_user_role = get_current_user_role(request)
     return await call_next(request)
 
 
@@ -200,6 +203,7 @@ def _map_error_code_to_category(error_code: str) -> str:
         "NOT_FOUND": "not_found",
         "EXTERNAL_SERVICE_ERROR": "external_service_error",
         "UNAUTHORIZED": "unauthorized",
+        "FORBIDDEN": "forbidden",
         "INTERNAL_SERVER_ERROR": "internal_server_error",
     }
     return mapping.get(error_code, "api_error")

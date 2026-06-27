@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs | {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Admin Workspace</p>
+            <h2>Audit Logs</h2>
+            <p class="section-copy">僅限 admin 檢視的最小操作日誌頁，展示角色權限與平台稽核能力。</p>
+        </div>
+    </div>
+
+    {% if audit_logs %}
+    <div class="table-shell">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>時間</th>
+                    <th>事件類型</th>
+                    <th>使用者</th>
+                    <th>目標類型</th>
+                    <th>目標值</th>
+                    <th>狀態</th>
+                    <th>上下文</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in audit_logs %}
+                <tr>
+                    <td>{{ item.created_at }}</td>
+                    <td>{{ item.event_type }}</td>
+                    <td>{{ item.username }}</td>
+                    <td>{{ item.target_type }}</td>
+                    <td>{{ item.target_value }}</td>
+                    <td>{{ item.status }}</td>
+                    <td>{{ item.context }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">目前尚無 audit log 資料。</p>
+    {% endif %}
+</section>
+{% endblock %}
